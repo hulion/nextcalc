@@ -9,6 +9,18 @@ let lastKeyTime = Date.now();
 document.addEventListener('keydown', (event) => {
     const currentTime = Date.now();
 
+    // Boss key: Cmd+Escape to lock screen (non-destructive)
+    if (event.key === 'Escape' && event.metaKey) {
+        event.preventDefault();
+        console.log('[Panic Detector] Cmd+Escape pressed - triggering lock screen');
+
+        // Trigger panic mode (lock screen only, no data clearing)
+        if (window.electronAPI && window.electronAPI.panicMode) {
+            window.electronAPI.panicMode();
+        }
+        return;
+    }
+
     // Reset if more than 3 seconds between keypresses
     if (currentTime - lastKeyTime > 3000) {
         panicSequence = '';
@@ -71,12 +83,12 @@ document.addEventListener('keydown', (event) => {
                     if (window.electronAPI.panicMode) {
                         window.electronAPI.panicMode();
                     } else {
-                        window.location.href = 'calculator.html';
+                        window.location.href = 'calculator-lock.html';
                     }
                 })();
             } else {
                 // Fallback: just go back to calculator
-                window.location.href = 'calculator.html';
+                window.location.href = 'calculator-lock.html';
             }
         }
     } else {
@@ -85,4 +97,4 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
-console.log('[Panic Detector] Initialized - Press "4" six times quickly to logout');
+console.log('[Panic Detector] Initialized - Press Cmd+Escape to lock screen, or "4" six times quickly to emergency logout');

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, BrowserView, Notification, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, BrowserView, Notification, ipcMain, Menu, globalShortcut } = require('electron');
 const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -168,20 +168,6 @@ function createMenu() {
 
   viewSubmenu.push({ type: 'separator' });
 
-  // Add Standard Mode (always available)
-  viewSubmenu.push({
-    label: 'Standard Mode',
-    accelerator: 'CmdOrCtrl+L',
-    click: () => {
-      if (mainWindow) {
-        isUnlocked = false;
-        mainWindow.loadFile('calculator.html').then(() => {
-          createMenu(); // Rebuild menu after switching
-        });
-      }
-    }
-  });
-
   // Only show these items when unlocked
   if (isUnlocked) {
     viewSubmenu.push({
@@ -191,41 +177,12 @@ function createMenu() {
         openPasswordSettingsWindow();
       }
     });
-    viewSubmenu.push({
-      label: 'Scientific Mode',
-      accelerator: 'CmdOrCtrl+T',
-      click: () => {
-        if (mainWindow) {
-          mainWindow.loadURL('https://web.telegram.org/k/');
-
-          // Inject panic detector when Telegram loads
-          mainWindow.webContents.once('did-finish-load', () => {
-            // Set window title to NEXT TG
-            mainWindow.setTitle('NEXT TG');
-
-            // Add delay to ensure Telegram is fully loaded
-            setTimeout(() => {
-              const panicDetectorCode = fs.readFileSync(path.join(__dirname, 'panic-detector.js'), 'utf8');
-              mainWindow.webContents.executeJavaScript(panicDetectorCode)
-                .then(() => {
-                  console.log('[Main] Panic detector injected successfully (from menu)');
-                })
-                .catch(err => {
-                  console.error('[Main] Failed to inject panic detector:', err);
-                });
-            }, 1000);
-            createMenu(); // Rebuild menu after switching
-            resetIdleTimer(); // Start idle timer
-          });
-        }
-      }
-    });
 
     // Add Lock Screen option when Telegram is loaded
     if (isTelegramLoaded) {
       viewSubmenu.push({
         label: 'Lock Screen',
-        accelerator: 'CmdOrCtrl+Shift+L',
+        accelerator: 'CommandOrControl+Escape',
         click: () => {
           console.log('[Main] Manual lock triggered from menu');
           lockApp();
@@ -376,8 +333,8 @@ function injectCalculatorOverlay() {
     return;
   }
 
-  // Read calculator.html and extract content
-  const calculatorHtmlPath = path.join(__dirname, 'calculator.html');
+  // Read calculator-lock.html and extract content
+  const calculatorHtmlPath = path.join(__dirname, 'calculator-lock.html');
   const calculatorHtml = fs.readFileSync(calculatorHtmlPath, 'utf8');
 
   // Parse calculator HTML to extract body content, styles, and scripts
@@ -844,6 +801,20 @@ ipcMain.handle('show-notification', async (event, { title, body, icon, tag, sile
 app.on('ready', async () => {
   loadPassword(); // Load saved password (or use default 1209)
   createWindow();
+
+  // Register global shortcut for boss key (Cmd+Escape)
+  const ret = globalShortcut.register('CommandOrControl+Escape', () => {
+    console.log('[Main] Cmd+Escape global shortcut pressed - triggering lock screen');
+    if (mainWindow && isTelegramLoaded) {
+      lockApp();
+    }
+  });
+
+  if (ret) {
+    console.log('[Main] Cmd+Escape global shortcut registered successfully');
+  } else {
+    console.log('[Main] Cmd+Escape global shortcut registration failed');
+  }
 });
 
 app.on('window-all-closed', () => {
@@ -856,6 +827,12 @@ app.on('activate', () => {
   if (mainWindow === null) {
     createWindow();
   }
+});
+
+app.on('will-quit', () => {
+  // Unregister all global shortcuts
+  globalShortcut.unregisterAll();
+  console.log('[Main] Global shortcuts unregistered');
 });
 
 app.setName('Telegram');
