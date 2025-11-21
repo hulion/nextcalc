@@ -1,20 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm cache clean:*)",
-      "Bash(sudo chown:*)",
-      "Bash(npm install:*)",
-      "Bash(npm start)",
-      "Bash(pkill:*)",
-      "Bash(osascript:*)",
-      "Bash(sips:*)",
-      "Bash(iconutil:*)",
-      "Bash(npm run build-dmg:*)",
-      "Bash(npm run build:*)",
-      "Bash(node -c:*)",
-      "Bash(git init:*)",
-      "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nImplement BrowserView architecture with calculator lock screen\n\nMajor features:\n- Replace iframe with Electron BrowserView to bypass X-Frame-Options\n- Implement calculator-based password lock screen\n- Add panic mode with customizable shortcut (Cmd+Shift+H)\n- Implement auto-lock on idle timeout\n- Add calculator state reset on lock/unlock\n\nTechnical implementation:\n- BrowserView positioning strategy (off-screen when locked)\n- Global resetCalculator() function for state management\n- Telegram Web runs continuously in background\n- Password validation through calculator input sequence\n- Settings panel for password and timeout configuration\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

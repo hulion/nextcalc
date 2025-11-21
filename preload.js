@@ -32,6 +32,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   setIdleTime: (seconds) => {
     return ipcRenderer.invoke('set-idle-time', seconds);
+  },
+  switchToEnglishInput: () => {
+    return ipcRenderer.invoke('switch-to-english-input');
   }
 });
 

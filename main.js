@@ -1,4 +1,5 @@
 const { app, BrowserWindow, BrowserView, Notification, ipcMain, Menu } = require('electron');
+const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
@@ -688,6 +689,38 @@ ipcMain.handle('set-idle-time', async (event, seconds) => {
   } catch (err) {
     console.error('[Main] Failed to set idle time:', err);
     throw err;
+  }
+});
+
+ipcMain.handle('switch-to-english-input', async () => {
+  try {
+    // 使用 im-select 工具或系統指令來切換到英文輸入法
+    // 方法1: 嘗試使用 defaults 讀取當前輸入法並切換到 com.apple.keylayout.ABC
+    const switchScript = `
+      tell application "System Events"
+        tell process "SystemUIServer"
+          tell (menu bar item 1 of menu bar 1 where description is "text input")
+            select
+            tell menu 1
+              click menu item "ABC"
+            end tell
+          end tell
+        end tell
+      end tell
+    `;
+
+    exec(`osascript -e '${switchScript.replace(/\n/g, ' ')}'`, (error, stdout, stderr) => {
+      if (error) {
+        console.error('[Main] Failed to switch input method:', error);
+      } else {
+        console.log('[Main] Switched to English input method');
+      }
+    });
+
+    return true;
+  } catch (err) {
+    console.error('[Main] Failed to switch to English input:', err);
+    return false;
   }
 });
 
