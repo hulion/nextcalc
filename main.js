@@ -92,17 +92,18 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      webSecurity: true
+      webSecurity: true,
+      backgroundThrottling: false  // 確保在背景時仍能接收通知
     }
   });
 
-  // Add BrowserView to window
+  // Add BrowserView to window immediately
   mainWindow.addBrowserView(telegramView);
 
   // Get window bounds
   const bounds = mainWindow.getContentBounds();
 
-  // Set BrowserView to cover entire window (hidden off-screen initially)
+  // Set BrowserView bounds (move far off-screen initially since app starts locked)
   telegramView.setBounds({ x: 0, y: -10000, width: bounds.width, height: bounds.height });
   telegramView.setAutoResize({ width: true, height: true });
 
@@ -606,7 +607,7 @@ ipcMain.handle('unlock-app', async () => {
 
     console.log('[Main] Unlocking app - showing BrowserView');
 
-    // Show Telegram BrowserView
+    // Move BrowserView to visible position (covers calculator lock screen)
     const bounds = mainWindow.getContentBounds();
     telegramView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
 
@@ -757,8 +758,8 @@ function lockApp() {
   if (mainWindow && telegramView && isUnlocked) {
     isUnlocked = false;
 
-    // Hide Telegram BrowserView (move off-screen)
-    console.log('[Main] Locking app - hiding BrowserView');
+    // Hide Telegram BrowserView (move off-screen but keep webContents active for notifications)
+    console.log('[Main] Locking app - hiding BrowserView (moving off-screen, webContents stays active)');
     const bounds = mainWindow.getContentBounds();
     telegramView.setBounds({ x: 0, y: -10000, width: bounds.width, height: bounds.height });
 
