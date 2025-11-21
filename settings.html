@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>NEXT Calc - 密碼設定</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(18, 24, 38, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            animation: fadeIn 0.3s ease-out;
+            z-index: 1;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .settings-overlay {
+            background: #000000;
+            width: 420px;
+            height: 600px;
+            border-radius: 40px;
+            border: 1px solid #1f2937;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            -webkit-user-select: none;
+            user-select: none;
+            position: absolute;
+            z-index: 2;
+            overflow: hidden;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .tab-pane button,
+        .tab-pane input,
+        .tab-pane label,
+        .tab-pane .current-status-card {
+            -webkit-app-region: no-drag;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 24px 0 24px;
+            -webkit-user-select: none;
+            user-select: none;
+            cursor: move;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            padding: 0 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            -webkit-app-region: no-drag;
+        }
+
+        .tab {
+            padding: 16px 24px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #9ca3af;
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .tab:hover {
+            color: #d1d5db;
+        }
+
+        .tab.active {
+            color: #f97316;
+            border-bottom-color: #f97316;
+        }
+
+        /* Tab Container */
+        .tab-container {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Tab Content - 預設隱藏 */
+        .tab-pane {
+            display: none;
+            height: 100%;
+            padding: 24px 32px;
+            overflow-y: auto;
+        }
+
+        /* Active Tab - 顯示 */
+        .tab-pane.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .close-btn {
+            -webkit-app-region: no-drag !important;
+        }
+
+        .title-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .lock-icon {
+            width: 20px;
+            height: 20px;
+            color: #f97316;
+            pointer-events: none;
+        }
+
+        h1 {
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 600;
+            pointer-events: none;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 8px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+
+        /* 目前狀態顯示卡片 */
+        .current-status-card {
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            margin-bottom: 24px;
+        }
+
+        .status-info {
+            flex: 1;
+        }
+
+        .status-label {
+            color: #9ca3af;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .status-value {
+            color: #f97316;
+            font-size: 28px;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 8px;
+        }
+
+        .status-value.not-set {
+            color: #6b7280;
+            letter-spacing: 0;
+            font-size: 24px;
+        }
+
+        .toggle-visibility-btn {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 12px;
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .toggle-visibility-btn:hover {
+            background: #1f2937;
+            color: #fff;
+        }
+
+        /* 表單區塊 */
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        .form-section:first-of-type {
+            margin-top: 0;
+        }
+
+        label {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0.7;
+        }
+
+        #newPasswordLabel {
+            padding-top: 8px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 16px;
+            font-size: 24px;
+            text-align: center;
+            letter-spacing: 12px;
+            background: #111827;
+            border: 2px solid #1f2937;
+            border-radius: 16px;
+            color: #ffffff;
+            outline: none;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            -webkit-user-select: auto;
+            user-select: auto;
+        }
+
+        input[type="text"]::placeholder {
+            letter-spacing: 8px;
+        }
+
+        input:focus {
+            border-color: #f97316;
+        }
+
+        /* 訊息區 */
+        .message {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .message.show {
+            display: flex;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .message.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .message.success {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* 按鈕組 */
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 35px;
+        }
+
+        .back-btn,
+        .submit-btn {
+            flex: 1;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 700;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .back-btn {
+            background: #374151;
+            color: white;
+        }
+
+        .back-btn:hover {
+            background: #4b5563;
+            transform: translateY(-2px);
+        }
+
+        .back-btn:active {
+            transform: scale(0.95);
+        }
+
+        .submit-btn {
+            background: #f97316;
+            color: white;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        }
+
+        .submit-btn:hover {
+            background: #ea580c;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(249, 115, 22, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: scale(0.95);
+        }
+
+        .submit-btn:disabled {
+            background: #374151;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 圖示 */
+        .icon {
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* 輸入提示 */
+        .input-hint {
+            margin-top: 0;
+            font-size: 13px;
+            min-height: 20px;
+            transition: all 0.3s;
+        }
+
+        .input-hint.error {
+            color: #ef4444;
+        }
+
+        .input-hint.success {
+            color: #10b981;
+        }
+
+        .input-hint.warning {
+            color: #f59e0b;
+        }
+
+        #confirmPasswordHint {
+            min-height: 0;
+        }
+
+        /* 閒置時間設定樣式 */
+        .idle-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .idle-option {
+            padding: 20px;
+            background: #1f2937;
+            border: 2px solid transparent;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #d1d5db;
+        }
+
+        .idle-option:hover {
+            background: #374151;
+            transform: translateY(-2px);
+        }
+
+        .idle-option.selected {
+            background: #f97316;
+            border-color: #ea580c;
+            color: white;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        }
+
+        .idle-description {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(249, 115, 22, 0.1);
+            border-left: 3px solid #f97316;
+            border-radius: 8px;
+            color: #d1d5db;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="backdrop"></div>
+    <div class="settings-overlay">
+        <!-- Header -->
+        <div class="header">
+            <div class="title-group">
+                <svg class="lock-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                <h1>Settings</h1>
+            </div>
+            <button class="close-btn" onclick="goBack()">×</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('password')">密碼設定</button>
+            <button class="tab" onclick="switchTab('idle')">閒置時間</button>
+        </div>
+
+        <!-- Tab Container -->
+        <div class="tab-container">
+            <!-- Password Tab Pane -->
+            <div class="tab-pane active" id="passwordTab">
+            <!-- 目前狀態顯示卡片 -->
+            <div class="current-status-card">
+                <div class="status-info">
+                    <div class="status-label">目前狀態</div>
+                    <div class="status-value" id="statusValue">載入中...</div>
+                </div>
+                <button class="toggle-visibility-btn" id="toggleVisibilityBtn" style="display: none;" onclick="togglePasswordVisibility()">
+                    <svg id="eyeIcon" class="icon" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    <svg id="eyeOffIcon" class="icon" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: none;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- 新密碼 -->
+            <div class="form-section">
+                <label id="newPasswordLabel">設定密碼（4位數字）</label>
+                <input type="text" id="newPassword" maxlength="4" placeholder="0000" inputmode="numeric" pattern="[0-9]*">
+                <div class="input-hint" id="newPasswordHint"></div>
+            </div>
+
+            <!-- 確認密碼 -->
+            <div class="form-section">
+                <label>再次確認（4位數字）</label>
+                <input type="text" id="confirmPassword" maxlength="4" placeholder="0000" inputmode="numeric" pattern="[0-9]*">
+                <div class="input-hint" id="confirmPasswordHint"></div>
+            </div>
+
+            <!-- 訊息區 -->
+            <div class="message" id="message">
+                <svg class="message-icon" id="messageIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span id="messageText"></span>
+            </div>
+
+            <!-- 按鈕組 -->
+            <div class="button-group">
+                <button class="back-btn" onclick="goBack()">返回</button>
+                <button class="submit-btn" id="submitBtn" onclick="savePassword()">設定密碼</button>
+            </div>
+            </div>
+
+            <!-- Idle Time Tab Pane -->
+            <div class="tab-pane" id="idleTab">
+            <div class="form-section">
+                <label>閒置自動鎖定</label>
+                <div class="idle-options">
+                    <div class="idle-option" data-value="30" onclick="selectIdleTime(30)">30 秒</div>
+                    <div class="idle-option" data-value="60" onclick="selectIdleTime(60)">1 分鐘</div>
+                    <div class="idle-option" data-value="120" onclick="selectIdleTime(120)">2 分鐘</div>
+                    <div class="idle-option" data-value="180" onclick="selectIdleTime(180)">3 分鐘</div>
+                    <div class="idle-option" data-value="240" onclick="selectIdleTime(240)">4 分鐘</div>
+                    <div class="idle-option" data-value="300" onclick="selectIdleTime(300)">5 分鐘</div>
+                    <div class="idle-option" data-value="0" onclick="selectIdleTime(0)">永不</div>
+                </div>
+            </div>
+
+            <div class="idle-description">
+                <strong>說明：</strong>當您在 Telegram 介面閒置超過設定的時間後，應用程式會自動切換回計算機鎖定畫面。Telegram 的通知功能仍會正常運作，但需要重新輸入密碼才能查看內容。
+            </div>
+
+            <!-- 訊息區 -->
+            <div class="message" id="idleMessage">
+                <svg class="message-icon" id="idleMessageIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span id="idleMessageText"></span>
+            </div>
+
+            <!-- 按鈕組 -->
+            <div class="button-group">
+                <button class="back-btn" onclick="goBack()">返回</button>
+                <button class="submit-btn" id="idleSubmitBtn" onclick="saveIdleTime()">儲存設定</button>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPassword = null;
+        let isPasswordVisible = false;
+
+        const statusValue = document.getElementById('statusValue');
+        const toggleVisibilityBtn = document.getElementById('toggleVisibilityBtn');
+        const eyeIcon = document.getElementById('eyeIcon');
+        const eyeOffIcon = document.getElementById('eyeOffIcon');
+        const newPasswordInput = document.getElementById('newPassword');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const newPasswordLabel = document.getElementById('newPasswordLabel');
+        const submitBtn = document.getElementById('submitBtn');
+        const message = document.getElementById('message');
+        const messageText = document.getElementById('messageText');
+        const messageIcon = document.getElementById('messageIcon');
+        const newPasswordHint = document.getElementById('newPasswordHint');
+        const confirmPasswordHint = document.getElementById('confirmPasswordHint');
+
+        // 載入目前密碼
+        async function loadCurrentPassword() {
+            try {
+                currentPassword = await window.electronAPI.getPassword();
+
+                // 檢查是否使用預設密碼
+                if (currentPassword === '1209') {
+                    statusValue.textContent = '使用預設密碼';
+                    statusValue.classList.add('not-set');
+                    toggleVisibilityBtn.style.display = 'none';
+                    newPasswordLabel.textContent = '設定密碼（4位數字）';
+                    submitBtn.textContent = '設定密碼';
+                } else if (currentPassword) {
+                    statusValue.textContent = '● ● ● ●';
+                    statusValue.classList.remove('not-set');
+                    toggleVisibilityBtn.style.display = 'block';
+                    newPasswordLabel.textContent = '設定新密碼（4位數字）';
+                    submitBtn.textContent = '更新密碼';
+                } else {
+                    statusValue.textContent = '未設定';
+                    statusValue.classList.add('not-set');
+                    toggleVisibilityBtn.style.display = 'none';
+                    newPasswordLabel.textContent = '設定密碼（4位數字）';
+                    submitBtn.textContent = '設定密碼';
+                }
+            } catch (err) {
+                statusValue.textContent = '無法載入';
+                statusValue.classList.add('not-set');
+                console.error('Failed to load password:', err);
+            }
+        }
+
+        // 切換密碼顯示/隱藏
+        function togglePasswordVisibility() {
+            isPasswordVisible = !isPasswordVisible;
+
+            if (isPasswordVisible) {
+                statusValue.textContent = currentPassword;
+                eyeIcon.style.display = 'none';
+                eyeOffIcon.style.display = 'block';
+            } else {
+                statusValue.textContent = '● ● ● ●';
+                eyeIcon.style.display = 'block';
+                eyeOffIcon.style.display = 'none';
+            }
+        }
+
+        // 顯示訊息
+        function showMessage(text, type) {
+            messageText.textContent = text;
+            message.className = `message show ${type}`;
+
+            // 更新圖示
+            if (type === 'success') {
+                messageIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
+            } else {
+                messageIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+            }
+
+            // 3秒後自動隱藏
+            setTimeout(() => {
+                message.classList.remove('show');
+            }, 3000);
+        }
+
+        // 限制輸入只能是數字並顯示提示
+        function restrictToNumbers(input, hintElement) {
+            input.addEventListener('input', (e) => {
+                // 移除非數字字元
+                const oldValue = e.target.value;
+                const newValue = oldValue.replace(/[^0-9]/g, '');
+                e.target.value = newValue;
+
+                // 如果有非數字字元被移除，顯示警告
+                if (oldValue !== newValue && oldValue.length > 0) {
+                    hintElement.textContent = '⚠️ 只能輸入數字';
+                    hintElement.className = 'input-hint error';
+                    return;
+                }
+
+                // 根據長度顯示提示
+                const length = newValue.length;
+                if (length === 0) {
+                    hintElement.textContent = '';
+                    hintElement.className = 'input-hint';
+                } else if (length < 4) {
+                    hintElement.textContent = `請輸入 ${4 - length} 位數字 (${length}/4)`;
+                    hintElement.className = 'input-hint warning';
+                } else if (length === 4) {
+                    hintElement.textContent = '✓ 已輸入4位數字';
+                    hintElement.className = 'input-hint success';
+                }
+            });
+
+            // 當焦點離開時檢查
+            input.addEventListener('blur', (e) => {
+                const value = e.target.value;
+                if (value.length > 0 && value.length < 4) {
+                    hintElement.textContent = '❌ 密碼必須是4位數字';
+                    hintElement.className = 'input-hint error';
+                }
+            });
+
+            // 當獲得焦點時，如果已經有4位數字就清除提示
+            input.addEventListener('focus', (e) => {
+                if (e.target.value.length === 4) {
+                    hintElement.textContent = '';
+                    hintElement.className = 'input-hint';
+                }
+            });
+        }
+
+        restrictToNumbers(newPasswordInput, newPasswordHint);
+        restrictToNumbers(confirmPasswordInput, confirmPasswordHint);
+
+        // 儲存密碼
+        async function savePassword() {
+            const newPwd = newPasswordInput.value;
+            const confirmPwd = confirmPasswordInput.value;
+
+            // 驗證：必須是4位數字
+            if (!/^[0-9]{4}$/.test(newPwd)) {
+                showMessage('密碼必須是4位數字', 'error');
+                return;
+            }
+
+            // 驗證：確認密碼
+            if (newPwd !== confirmPwd) {
+                showMessage('兩次密碼輸入不一致', 'error');
+                return;
+            }
+
+            // 驗證：不能使用保留密碼
+            if (newPwd === '4444') {
+                showMessage('此密碼為系統保留碼，請使用其他密碼', 'error');
+                return;
+            }
+
+            try {
+                submitBtn.disabled = true;
+                await window.electronAPI.setPassword(newPwd);
+                showMessage('密碼設定成功！', 'success');
+
+                // 更新當前密碼
+                currentPassword = newPwd;
+
+                // 清空表單
+                newPasswordInput.value = '';
+                confirmPasswordInput.value = '';
+
+                // 更新顯示
+                loadCurrentPassword();
+
+                // 1.5秒後返回
+                setTimeout(() => {
+                    goBack();
+                }, 1500);
+            } catch (err) {
+                showMessage('儲存失敗：' + err.message, 'error');
+                submitBtn.disabled = false;
+                console.error('Failed to save password:', err);
+            }
+        }
+
+        function goBack() {
+            // Close the window with fade out animation
+            const overlay = document.querySelector('.settings-overlay');
+            overlay.style.animation = 'slideDown 0.3s ease-out';
+
+            setTimeout(() => {
+                window.close();
+            }, 300);
+        }
+
+        // Add slideDown animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideDown {
+                from {
+                    opacity: 1;
+                    transform: scale(1) translateY(0);
+                }
+                to {
+                    opacity: 0;
+                    transform: scale(0.9) translateY(30px);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 拖移功能
+        const overlay = document.querySelector('.settings-overlay');
+        const header = document.querySelector('.header');
+
+        // 初始化置中位置
+        function centerOverlay() {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const overlayWidth = 420;
+            const overlayHeight = 600;
+
+            const left = (windowWidth - overlayWidth) / 2;
+            const top = (windowHeight - overlayHeight) / 2;
+
+            overlay.style.left = left + 'px';
+            overlay.style.top = top + 'px';
+        }
+
+        // 頁面載入時置中
+        centerOverlay();
+
+        let isDragging = false;
+        let offsetX;
+        let offsetY;
+
+        header.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            offsetX = e.clientX - overlay.offsetLeft;
+            offsetY = e.clientY - overlay.offsetTop;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                e.preventDefault();
+                const newX = e.clientX - offsetX;
+                const newY = e.clientY - offsetY;
+
+                overlay.style.left = newX + 'px';
+                overlay.style.top = newY + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Tab 切換功能
+        function switchTab(tabName) {
+            // 移除所有 active class
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+            // 添加 active class 到選中的 tab
+            if (tabName === 'password') {
+                document.querySelector('.tab[onclick="switchTab(\'password\')"]').classList.add('active');
+                document.getElementById('passwordTab').classList.add('active');
+            } else if (tabName === 'idle') {
+                document.querySelector('.tab[onclick="switchTab(\'idle\')"]').classList.add('active');
+                document.getElementById('idleTab').classList.add('active');
+                loadIdleTime();
+            }
+        }
+
+        // 閒置時間相關變數和函數
+        let selectedIdleTime = 60; // 預設 1 分鐘
+
+        async function loadIdleTime() {
+            try {
+                const idleTime = await window.electronAPI.getIdleTime();
+                selectedIdleTime = idleTime !== undefined ? idleTime : 60;
+                updateIdleTimeSelection();
+            } catch (err) {
+                console.error('Failed to load idle time:', err);
+                selectedIdleTime = 60;
+                updateIdleTimeSelection();
+            }
+        }
+
+        function updateIdleTimeSelection() {
+            document.querySelectorAll('.idle-option').forEach(option => {
+                option.classList.remove('selected');
+                if (parseInt(option.dataset.value) === selectedIdleTime) {
+                    option.classList.add('selected');
+                }
+            });
+        }
+
+        function selectIdleTime(seconds) {
+            selectedIdleTime = seconds;
+            updateIdleTimeSelection();
+        }
+
+        async function saveIdleTime() {
+            try {
+                const idleSubmitBtn = document.getElementById('idleSubmitBtn');
+                idleSubmitBtn.disabled = true;
+
+                await window.electronAPI.setIdleTime(selectedIdleTime);
+
+                showIdleMessage('設定已儲存', 'success');
+                idleSubmitBtn.disabled = false;
+
+                setTimeout(() => {
+                    goBack();
+                }, 1500);
+            } catch (err) {
+                showIdleMessage('儲存失敗：' + err.message, 'error');
+                idleSubmitBtn.disabled = false;
+                console.error('Failed to save idle time:', err);
+            }
+        }
+
+        function showIdleMessage(text, type) {
+            const idleMessage = document.getElementById('idleMessage');
+            const idleMessageText = document.getElementById('idleMessageText');
+            const idleMessageIcon = document.getElementById('idleMessageIcon');
+
+            idleMessageText.textContent = text;
+            idleMessage.className = `message show ${type}`;
+
+            if (type === 'success') {
+                idleMessageIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
+            } else {
+                idleMessageIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+            }
+
+            setTimeout(() => {
+                idleMessage.classList.remove('show');
+            }, 3000);
+        }
+
+        // 初始化
+        loadCurrentPassword();
+
+        // Enter 鍵送出
+        confirmPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                savePassword();
+            }
+        });
+    </script>
+</body>
+</html>
