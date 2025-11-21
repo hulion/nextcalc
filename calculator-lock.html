@@ -60,6 +60,27 @@
             padding: 24px;
         }
 
+        .header-logo {
+            height: 18px;
+            width: auto;
+            opacity: 0.9;
+            transition: all 0.3s;
+        }
+
+        .header-logo:hover {
+            opacity: 1;
+        }
+
+        /* 暗色模式：NEXT文字變白色，C2保持橘色 */
+        .dark .header-logo {
+            --logo-text-color: #ffffff;
+        }
+
+        /* 亮色模式：NEXT文字保持黑色，C2保持橘色 */
+        .light .header-logo {
+            --logo-text-color: #000000;
+        }
+
         .icon-btn {
             width: 40px;
             height: 40px;
@@ -246,6 +267,7 @@
             font-size: 12px;
             min-height: 16px;
             transition: all 0.3s;
+            display: none;
         }
 
         .dark .status {
@@ -254,6 +276,54 @@
 
         .light .status {
             background: #f9fafb;
+        }
+
+        /* 膠囊式懸浮狀態列 */
+        .floating-status {
+            position: absolute;
+            top: 120px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-10px);
+            z-index: 100;
+            padding: 8px 20px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            white-space: nowrap;
+        }
+
+        .floating-status.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .dark .floating-status {
+            background: rgba(31, 41, 55, 0.85);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+        }
+
+        .light .floating-status {
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+        }
+
+        .floating-status.status-success {
+            color: #10b981;
+        }
+
+        .floating-status.status-error {
+            color: #ef4444;
+        }
+
+        .floating-status.status-info {
+            color: #f97316;
         }
 
         /* 歷史紀錄覆蓋層 */
@@ -672,6 +742,25 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
             </button>
+            <svg class="header-logo" id="_圖層_1" data-name="圖層_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 728.29 127.18">
+                <defs>
+                    <style>
+                    .st0 {
+                        fill: #e87b35;
+                    }
+                    .st1 {
+                        fill: var(--logo-text-color, #000000);
+                    }
+                    </style>
+                </defs>
+                <path class="st1" d="M110.33,94.92l.83-81.15,14.12-.41-.43,102.67c-.56.56-13.19.69-14.33.04-23.73-22.69-47.11-45.79-70.96-68.35-4.67-4.42-9.42-9-14.53-12.83l-1.04,81.16c-4.56.57-9.15.57-13.7,0V13.77s14.1-.2,14.1-.2c26.15,23.8,50.75,49.35,76.6,73.49.69.65,8.98,8.35,9.35,7.86Z"/>
+                <path class="st1" d="M248.17,13.76c-.16,4.34.7,8.52,0,12.84-3.53-.38-7.15.33-10.57.43-18.98.54-38.94-1.11-57.74-.04-5.27.3-8.62.71-12.24,4.77-4.07,4.58-4.37,8.98-4.58,14.9-.12,3.42-.06,6.9.44,10.27l1.48.67c25.93.25,51.94-.36,77.81.45.73,4.44-.16,8.78,0,13.25l-78.62.47-.61.63c-.99,9.97-2.11,23.01,8.37,28.36,2.53,1.29,5.51,1.83,8.36,2.02,18.8,1.25,39.36-.24,58.54.41,3.10.11,6.24-.13,9.34,0,.62.6.67,12.18-.02,12.77-3.78.19-7.60-.08-11.39.03-17,.5-34.43,1.04-51.48.45-18.52-.65-35-6.85-36.33-27.95-.84-13.43-.72-32.09,0-45.58.57-10.68,5.04-19.84,14.54-25.25,11.62-6.62,31.05-3.96,44.2-3.91,13.5.05,27-.07,40.5-.02Z"/>
+                <path class="st0" d="M623.87,13.35l70.8.4c26.93,4.77,31.76,42.25,7.12,54.33-13.41,6.57-34.51,2.67-49.5,3.63-11.95.77-15.7,6.73-16.4,18.01-.11,1.83-.24,11.78.53,12.55l1.38.47c26.41.08,52.84-.12,79.2.44,1.10.26.91,12.36.22,12.79h-94.74s-.5-.33-.5-.33c.66-19.49-5.75-45.11,16.56-54.75,12.37-5.35,35.47-2.38,49.49-3.22,7.95-.48,14.47-4.55,15.15-13.04.82-10.27-4.38-17.65-15.15-17.63l-64.16-.4v-13.25Z"/>
+                <path class="st1" d="M376.44,13.77l-45.69,50.7,46.1,51.57c-5.35.11-12.44,1.13-17.66.44-1.76-.23-4.77-4.73-6.2-6.24-1.88-1.98-3.96-3.79-5.82-5.78-9.09-9.71-17.7-19.91-27.04-29.37-.56-.10-3.51,3.07-4.10,3.69-11.72,12.32-22.73,25.34-34.67,37.47-5.22.29-10.81.53-15.98-.19-.62-.09-1.03.01-1.44-.63l45.64-50.92-44.4-50.72,18.26-.2c11.37,11.45,21.47,24.14,32.59,35.81.62.65,4.03,4.27,4.56,4.14l36.75-39.96,19.1.21Z"/>
+                <path class="st0" d="M603.94,116.45c-13.47-.32-27.02.43-40.49.02s-23.37-1.86-34.95-9.86c-32.76-22.63-25.17-78.22,13.26-90.47,13.13-4.19,43.43-3.67,57.84-2.8,1.31.08,2.56.39,3.87.49.92,4.16.5,8.58.06,12.77-2.84-.37-5.79.34-8.49.43-12.56.45-37.49-2.2-48.07,1.74-31.12,11.57-32.78,57.20-2.25,70.77,12.84,5.71,37.81,2.84,52.78,3.67,2.06.11,4.84-.59,6.45.6v12.63Z"/>
+                <path class="st1" d="M390.14,13.76h100.88c-.17,4.45,1.14,8.88-.24,13.26-26.42-.35-52.87.42-79.28,0-.98-.02-1.89-.43-2.87-.45-5.92-.11-11.87.11-17.79.03-.27-.08-.70-.94-.70-1.05v-11.8Z"/>
+                <path class="st1" d="M447.43,38.2l-.05,77.16c-.66,1.92-11.49.88-13.65.68l-.02-77.6c.18-1.05,12.08-.68,13.72-.24Z"/>
+            </svg>
             <button class="icon-btn" onclick="toggleTheme()">
                 <svg class="icon sun-icon" fill="none" stroke="#fbbf24" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
@@ -680,6 +769,11 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                 </svg>
             </button>
+        </div>
+
+        <!-- 膠囊式懸浮狀態列 -->
+        <div class="floating-status" id="floatingStatus">
+            <span id="floatingStatusText"></span>
         </div>
 
         <!-- 顯示螢幕 -->
@@ -826,6 +920,37 @@
         const historyContent = document.getElementById('history-content');
         const sunIcon = document.querySelector('.sun-icon');
         const moonIcon = document.querySelector('.moon-icon');
+        const floatingStatus = document.getElementById('floatingStatus');
+        const floatingStatusText = document.getElementById('floatingStatusText');
+
+        // 狀態列定時器
+        let statusTimeout = null;
+
+        // 顯示懸浮狀態列
+        function showStatus(message, type = 'info', duration = 2000) {
+            // 清除之前的定時器
+            if (statusTimeout) {
+                clearTimeout(statusTimeout);
+            }
+
+            // 設置訊息和樣式
+            floatingStatusText.textContent = message;
+            floatingStatus.className = 'floating-status show';
+
+            // 添加狀態類型
+            if (type === 'success') {
+                floatingStatus.classList.add('status-success');
+            } else if (type === 'error') {
+                floatingStatus.classList.add('status-error');
+            } else {
+                floatingStatus.classList.add('status-info');
+            }
+
+            // 設置自動隱藏
+            statusTimeout = setTimeout(() => {
+                floatingStatus.classList.remove('show');
+            }, duration);
+        }
 
         // 載入密碼
         async function loadPassword() {
@@ -1006,30 +1131,23 @@
         async function checkPassword() {
             // 檢查緊急清除代碼 (4444)
             if (passwordInput.includes('4444')) {
-                status.textContent = '清除資料中...';
-                status.style.color = '#f97316';
+                showStatus('清除資料中...', 'info', 3000);
                 try {
                     await window.electronAPI.clearTelegramData();
                     await window.electronAPI.resetPassword();
                     PASSWORD = '1209'; // Reset to default
-                    status.textContent = '資料已清除，密碼已重置為預設值';
-                    status.style.color = '#10b981';
+                    showStatus('資料已清除，密碼已重置為預設值', 'success', 3000);
                     passwordInput = '';
                 } catch (err) {
-                    status.textContent = '清除失敗';
-                    status.style.color = '#ef4444';
+                    showStatus('清除失敗', 'error', 3000);
                     console.error('[Calculator] Failed to clear data:', err);
                 }
-                setTimeout(() => {
-                    status.textContent = '';
-                }, 2000);
                 return;
             }
 
             // 檢查解鎖密碼
             if (passwordInput.includes(PASSWORD)) {
-                status.textContent = 'Unlocking...';
-                status.style.color = '#10b981';
+                showStatus('Unlocking...', 'success', 1500);
                 setTimeout(() => {
                     // Notify main process to show BrowserView
                     if (window.electronAPI && window.electronAPI.unlockApp) {
@@ -1042,7 +1160,6 @@
                         previousValue = '';
                         operation = null;
                         passwordInput = '';
-                        status.textContent = '';
                         updateDisplay();
                     }, 100);
                 }, 500);
