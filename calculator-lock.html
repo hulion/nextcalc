@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEXT Calc</title>
+    <!-- Google Font: Barlow ExtraBold Italic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@1,800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -731,9 +735,81 @@
             transform: none;
             box-shadow: none;
         }
+
+        /* ==================== 動態背景跑馬燈效果 ==================== */
+        #bgLayer {
+            position: fixed;
+            inset: -100%;
+            width: 300%;
+            height: 300%;
+            pointer-events: none;
+            z-index: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            overflow: hidden;
+            transition: transform 1s ease-in-out;
+            transform-origin: center center;
+        }
+
+        .marquee-row {
+            display: flex;
+            width: 100%;
+            white-space: nowrap;
+            will-change: transform;
+            transition: opacity 0.3s;
+        }
+
+        .marquee-item {
+            font-family: 'Barlow', sans-serif;
+            font-weight: 800;
+            font-style: italic;
+            line-height: 1;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: color 0.3s;
+        }
+
+        /* 暗色模式下的跑馬燈顏色 (背景色 HSL 的 L 值 +10%) */
+        .dark .marquee-item {
+            color: hsl(220, 52%, 19%);
+        }
+
+        /* 亮色模式下的跑馬燈顏色 */
+        .light .marquee-item {
+            color: #cbd5e1;
+        }
+
+        /* 跑馬燈動畫 - 向左 */
+        @keyframes marquee-left {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* 跑馬燈動畫 - 向右 */
+        @keyframes marquee-right {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(0); }
+        }
+
+        /* 呼吸縮放動畫 */
+        @keyframes pulse-scale {
+            0% { transform: scale(0.1); }
+            100% { transform: scale(2.0); }
+        }
+
+        .calculator {
+            position: relative;
+            z-index: 10;
+        }
     </style>
 </head>
 <body class="dark">
+    <!-- 動態背景跑馬燈層 -->
+    <div id="bgLayer"></div>
+
     <div class="calculator">
         <!-- 頂部功能列 -->
         <div class="header">
@@ -911,6 +987,32 @@
         let passwordInput = '';
         let PASSWORD = '1209';
 
+        // === 背景跑馬燈狀態變量 ===
+        let bgNumber = '0';           // 背景顯示的數字
+        let bgAngle = 34;             // 背景旋轉角度
+        let bgGap = 60;               // 數字間距
+        let bgRowGap = 0;             // 行與行之間的垂直間距
+        let bgFontSize = 100;         // 字體大小
+        let animationIntervalRef = null;    // 數字動畫計時器
+        let autoRotateIntervalRef = null;   // 自動旋轉計時器
+        let idleTimerRef = null;             // 閒置計時器
+        let isRandomMode = false;            // 隨機符號模式標記
+
+        // 運算符號陣列
+        const operators = ['+', '-', '×', '÷'];
+
+        // 隨機獲取運算符號
+        function getRandomOperator() {
+            return operators[Math.floor(Math.random() * operators.length)];
+        }
+
+        // 行設定：10行，每行隨機速度和方向
+        const rowSettings = Array.from({ length: 10 }).map((_, i) => ({
+            id: i,
+            speed: 40 + Math.random() * 40,  // 40-80秒
+            direction: i % 2 === 0 ? 'left' : 'right'
+        }));
+
         // DOM 元素
         const display = document.getElementById('display');
         const previousDisplay = document.getElementById('previous-display');
@@ -950,6 +1052,177 @@
             statusTimeout = setTimeout(() => {
                 floatingStatus.classList.remove('show');
             }, duration);
+        }
+
+        // === 背景跑馬燈核心函數 ===
+
+        // 創建跑馬燈行
+        function createMarqueeRows() {
+            const bgLayer = document.getElementById('bgLayer');
+            bgLayer.innerHTML = '';  // 清空
+
+            rowSettings.forEach(row => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'marquee-row';
+                rowDiv.dataset.rowId = row.id;
+                rowDiv.style.animation = `marquee-${row.direction} ${row.speed}s linear infinite`;
+
+                // 生成12個數字項（加上重複以確保無縫）
+                for (let i = 0; i < 24; i++) {
+                    const span = document.createElement('span');
+                    span.className = 'marquee-item';
+                    span.textContent = bgNumber;
+                    span.style.fontSize = `${bgFontSize}px`;
+                    span.style.opacity = 0.1 + Math.random() * 0.7;  // 每個數字獨立透明度 0.1-0.8
+                    span.style.animation = `pulse-scale ${3 + Math.random() * 4}s ease-in-out infinite alternate`;
+                    span.style.animationDelay = `${Math.random() * 5}s`;
+                    rowDiv.appendChild(span);
+                }
+
+                bgLayer.appendChild(rowDiv);
+            });
+        }
+
+        // 更新跑馬燈內容（更新數字和樣式）
+        function updateMarqueeContent(number, useRandomMode = false) {
+            const rows = document.querySelectorAll('.marquee-row');
+            rows.forEach(row => {
+                const spans = row.querySelectorAll('.marquee-item');
+                spans.forEach(span => {
+                    if (useRandomMode) {
+                        span.textContent = getRandomOperator();
+                    } else {
+                        span.textContent = number;
+                    }
+                    span.style.fontSize = `${bgFontSize}px`;
+                    row.style.gap = `${bgGap}px`;
+                });
+            });
+
+            // 應用垂直間距到 #bgLayer
+            const bgLayer = document.getElementById('bgLayer');
+            bgLayer.style.gap = `${bgRowGap}px`;
+        }
+
+        // 核心函數：觸發背景變化
+        function triggerBgChange(targetVal) {
+            // 清除之前的動畫計時器
+            if (animationIntervalRef) {
+                clearInterval(animationIntervalRef);
+                animationIntervalRef = null;
+            }
+
+            const targetStr = targetVal.toString();
+            const targetNum = parseInt(targetStr);
+            const startNum = parseInt(bgNumber);
+
+            // 判斷是否需要漸變動畫
+            const isSymbol = isNaN(targetNum);
+            const isLongString = targetStr.length > 1;
+            const isResetJump = Math.abs(startNum) >= 10 && targetNum === 0;
+
+            // 直接設置（符號、長字串、或重置跳轉）
+            if (isSymbol || isLongString || isNaN(startNum) || targetNum === startNum || isResetJump) {
+                bgNumber = targetStr;
+                isRandomMode = false;  // 重置為正常模式
+                updateMarqueeContent(bgNumber, isRandomMode);
+                return;
+            }
+
+            // 漸變動畫
+            let current = startNum;
+            const step = targetNum > startNum ? 1 : -1;
+
+            animationIntervalRef = setInterval(() => {
+                current += step;
+                bgNumber = current.toString();
+                updateMarqueeContent(bgNumber);
+
+                if (current === targetNum) {
+                    clearInterval(animationIntervalRef);
+                    animationIntervalRef = null;
+                }
+            }, 60);
+        }
+
+        // 隨機化視覺參數並設置旋轉中心
+        function randomizeVisuals() {
+            const bgLayer = document.getElementById('bgLayer');
+            const calculator = document.querySelector('.calculator');
+
+            // 計算 calculator 元素的中心位置（相對於視口）
+            if (calculator) {
+                const calcRect = calculator.getBoundingClientRect();
+                const calcCenterX = calcRect.left + calcRect.width / 2;
+                const calcCenterY = calcRect.top + calcRect.height / 2;
+
+                // bgLayer 的左上角在 (-100vw, -100vh) 處
+                // 將視口坐標轉換為相對於 bgLayer 的坐標
+                const bgLayerOriginX = calcCenterX + window.innerWidth;
+                const bgLayerOriginY = calcCenterY + window.innerHeight;
+
+                // 設置 transform-origin（像素值）
+                bgLayer.style.transformOrigin = `${bgLayerOriginX}px ${bgLayerOriginY}px`;
+            }
+
+            const randomAngle = Math.floor(Math.random() * 360);
+            bgAngle = randomAngle;
+            bgLayer.style.transform = `rotate(${bgAngle}deg)`;
+
+            const randomGap = Math.floor(Math.random() * (200 - 20 + 1)) + 20;
+            bgGap = randomGap;
+
+            const randomRowGap = Math.floor(Math.random() * (200 - 20 + 1)) + 20;
+            bgRowGap = randomRowGap;
+
+            const randomSize = Math.floor(Math.random() * (200 - 20 + 1)) + 20;
+            bgFontSize = randomSize;
+
+            updateMarqueeContent(bgNumber, isRandomMode);
+        }
+
+        // 開始自動旋轉
+        function startAutoRotation() {
+            if (autoRotateIntervalRef) clearInterval(autoRotateIntervalRef);
+            isRandomMode = true;  // 進入隨機符號模式
+            autoRotateIntervalRef = setInterval(() => {
+                randomizeVisuals();
+            }, 5000);
+        }
+
+        // 處理用戶互動
+        function handleUserInteraction() {
+            isRandomMode = false;  // 恢復正常模式
+            randomizeVisuals();
+            if (autoRotateIntervalRef) clearInterval(autoRotateIntervalRef);
+            if (idleTimerRef) clearTimeout(idleTimerRef);
+            idleTimerRef = setTimeout(() => {
+                startAutoRotation();
+            }, 2000);
+        }
+
+        // 監聽 display 元素的變化並自動更新背景數字
+        let lastDisplayValue = '0';
+        function startDisplayObserver() {
+            const displayEl = document.getElementById('display');
+            if (!displayEl) return;
+
+            const observer = new MutationObserver(() => {
+                const currentValue = displayEl.textContent.replace(/,/g, ''); // 移除千分位
+                if (currentValue !== lastDisplayValue) {
+                    lastDisplayValue = currentValue;
+                    triggerBgChange(currentValue);
+                    handleUserInteraction();
+                }
+            });
+
+            observer.observe(displayEl, {
+                childList: true,
+                characterData: true,
+                subtree: true
+            });
+
+            console.log('[Calculator] Display observer started');
         }
 
         // 載入密碼
@@ -1072,6 +1345,9 @@
 
         // 特殊功能
         function handleSpecial(type) {
+            let nextBg = '0';
+
+
             switch (type) {
                 case 'AC':
                     input = '0';
@@ -1079,18 +1355,23 @@
                     operator = null;
                     isNewNumber = true;
                     passwordInput = '';
+                    nextBg = 'AC';
                     break;
                 case 'C':
                     input = '0';
                     isNewNumber = true;
+                    nextBg = '0';
                     break;
                 case '+/-':
                     input = (parseFloat(input.replace(/,/g, '')) * -1).toString();
+                    nextBg = input;
                     break;
                 case '%':
                     input = (parseFloat(input.replace(/,/g, '')) / 100).toString();
+                    nextBg = '%';
                     break;
             }
+
             updateDisplay();
         }
 
@@ -1199,6 +1480,12 @@
 
         // 初始化
         updateDisplay();
+
+        // === 初始化背景跑馬燈 ===
+        createMarqueeRows();
+        startAutoRotation();
+        startDisplayObserver();
+        console.log('[Calculator] Background marquee initialized');
 
         // 注意：自動切換輸入法功能已暫時移除
         // 用戶可以直接使用鍵盤數字鍵輸入密碼

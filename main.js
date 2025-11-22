@@ -14,6 +14,8 @@ let appPassword = DEFAULT_PASSWORD;
 let idleTimeout = 60; // Default idle time: 1 minute (in seconds)
 let idleTimer = null;
 let lastActivityTime = Date.now();
+let isWindowFocused = true; // Track window focus state
+const isDev = !app.isPackaged; // 開發模式檢測
 
 // Load password and settings from file
 function loadPassword() {
@@ -126,6 +128,9 @@ function createWindow() {
           console.error('[Main] Failed to inject panic detector:', err);
         });
     }, 1000);
+
+    // 重新設置活動追蹤以確保 BrowserView 事件綁定
+    setupActivityTracking();
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -569,7 +574,10 @@ ipcMain.handle('unlock-app', async () => {
     telegramView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
 
     createMenu(); // Rebuild menu after unlocking
-    resetIdleTimer(); // Start idle timer
+    // Only start idle timer if window is not focused
+    if (!isWindowFocused) {
+      resetIdleTimer();
+    }
 
     return true;
   }
@@ -691,8 +699,8 @@ function resetIdleTimer() {
     idleTimer = null;
   }
 
-  // Only start timer if unlocked and idle timeout is not 0 (永不)
-  if (isUnlocked && idleTimeout > 0) {
+  // Only start timer if unlocked, idle timeout is not 0, and window is not focused
+  if (isUnlocked && idleTimeout > 0 && !isWindowFocused) {
     idleTimer = setInterval(checkIdleTime, 1000); // Check every second
   }
 }
@@ -714,6 +722,12 @@ function checkIdleTime() {
 function lockApp() {
   if (mainWindow && telegramView && isUnlocked) {
     isUnlocked = false;
+
+    // Close settings window if it's open
+    if (settingsWindow) {
+      console.log('[Main] Locking app - closing settings window');
+      settingsWindow.close();
+    }
 
     // Hide Telegram BrowserView (move off-screen but keep webContents active for notifications)
     console.log('[Main] Locking app - hiding BrowserView (moving off-screen, webContents stays active)');
@@ -741,18 +755,96 @@ function lockApp() {
 function setupActivityTracking() {
   if (!mainWindow) return;
 
-  // Track mouse and keyboard events
+  if (isDev) console.log('[Activity] Setting up activity tracking...');
+
+  // === 主窗口活動追蹤（鎖定畫面） ===
   mainWindow.webContents.on('before-input-event', () => {
     if (isUnlocked) {
+      if (isDev) console.log('[Activity] Main window keyboard activity');
       resetIdleTimer();
     }
   });
 
   mainWindow.on('focus', () => {
+    isWindowFocused = true;
+    if (isUnlocked) {
+      if (isDev) console.log('[Activity] Main window focused - pausing idle timer');
+      // Clear timer but don't restart when window has focus
+      if (idleTimer) {
+        clearInterval(idleTimer);
+        idleTimer = null;
+      }
+    }
+  });
+
+  // === BrowserView 活動追蹤（Telegram 使用） ===
+  if (telegramView && telegramView.webContents) {
+    if (isDev) console.log('[Activity] Setting up BrowserView activity tracking');
+
+    // 鍵盤活動（打字、快捷鍵）
+    telegramView.webContents.on('before-input-event', (event, input) => {
+      if (isUnlocked) {
+        if (isDev) console.log('[Activity] Telegram keyboard activity:', input.key);
+        resetIdleTimer();
+      }
+    });
+
+    // 頁面內導航（切換聊天、滾動）
+    telegramView.webContents.on('did-navigate-in-page', () => {
+      if (isUnlocked) {
+        if (isDev) console.log('[Activity] Telegram page navigation');
+        resetIdleTimer();
+      }
+    });
+
+    // DOM 更新檢測（消息加載、UI 更新）
+    telegramView.webContents.on('dom-ready', () => {
+      if (isUnlocked) {
+        if (isDev) console.log('[Activity] Telegram DOM ready');
+        resetIdleTimer();
+      }
+    });
+  }
+
+  // === 窗口狀態變化處理 ===
+
+  // 窗口最小化
+  mainWindow.on('minimize', () => {
+    if (isDev) console.log('[Window] Window minimized - continuing idle timer');
+    // 繼續倒數，最小化後 idleTimeout 秒會自動鎖定
+  });
+
+  // 窗口恢復
+  mainWindow.on('restore', () => {
+    if (isDev) console.log('[Window] Window restored');
     if (isUnlocked) {
       resetIdleTimer();
     }
   });
+
+  // 窗口隱藏（縮小到 Dock）
+  mainWindow.on('hide', () => {
+    if (isDev) console.log('[Window] Window hidden (minimized to Dock)');
+  });
+
+  // 窗口顯示
+  mainWindow.on('show', () => {
+    if (isDev) console.log('[Window] Window shown');
+    if (isUnlocked) {
+      resetIdleTimer();
+    }
+  });
+
+  // 應用失去焦點（切換到其他應用）
+  mainWindow.on('blur', () => {
+    isWindowFocused = false;
+    if (isDev) console.log('[Window] App lost focus - starting idle timer');
+    if (isUnlocked) {
+      resetIdleTimer();  // Start idle timer when window loses focus
+    }
+  });
+
+  if (isDev) console.log('[Activity] Activity tracking setup complete');
 }
 
 ipcMain.handle('show-notification', async (event, { title, body, icon, tag, silent }) => {
