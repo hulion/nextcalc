@@ -615,11 +615,26 @@ ipcMain.handle('panic-mode', async () => {
 ipcMain.handle('clear-telegram-data', async () => {
   console.log('[Main] Clearing Telegram data...');
   try {
-    const session = mainWindow.webContents.session;
-    await session.clearStorageData({
+    // Clear Telegram data from BrowserView (where Telegram is actually running)
+    if (telegramView && telegramView.webContents) {
+      const telegramSession = telegramView.webContents.session;
+      await telegramSession.clearStorageData({
+        storages: ['cookies', 'localstorage', 'indexdb', 'websql', 'serviceworkers', 'cachestorage']
+      });
+      console.log('[Main] Telegram BrowserView data cleared successfully');
+
+      // Reload Telegram to show login screen
+      telegramView.webContents.loadURL('https://web.telegram.org/k/');
+      console.log('[Main] Telegram reloaded to login screen');
+    }
+
+    // Also clear main window session for good measure
+    const mainSession = mainWindow.webContents.session;
+    await mainSession.clearStorageData({
       storages: ['cookies', 'localstorage', 'indexdb', 'websql', 'serviceworkers', 'cachestorage']
     });
-    console.log('[Main] Telegram data cleared successfully');
+    console.log('[Main] Main window data cleared successfully');
+
     return true;
   } catch (err) {
     console.error('[Main] Failed to clear Telegram data:', err);

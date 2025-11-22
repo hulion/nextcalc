@@ -47,13 +47,17 @@
         }
 
         .dark .calculator {
-            background: #000;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border: 1px solid #1f2937;
         }
 
         .light .calculator {
-            background: #fff;
-            border: 1px solid #e5e7eb;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(229, 231, 235, 0.3);
         }
 
         /* 頂部功能列 */
@@ -172,17 +176,61 @@
         }
 
         .dark .buttons {
-            background: #111827;
+            background: rgba(17, 24, 39, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .dark .buttons::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                to bottom,
+                rgba(17, 24, 39, 0) 0%,
+                rgba(17, 24, 39, 1) 15%
+            );
+            border-radius: 32px 32px 0 0;
+            pointer-events: none;
+            z-index: 1;
         }
 
         .light .buttons {
-            background: #f9fafb;
+            background: rgba(249, 250, 251, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .light .buttons::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                to bottom,
+                rgba(249, 250, 251, 0) 0%,
+                rgba(249, 250, 251, 1) 15%
+            );
+            border-radius: 32px 32px 0 0;
+            pointer-events: none;
+            z-index: 1;
         }
 
         .button-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 10px;
+            position: relative;
+            z-index: 2;
         }
 
         button.calc-btn {
@@ -193,27 +241,40 @@
             font-size: 22px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: all 0.1s;
         }
 
         button.calc-btn:active {
-            transform: scale(0.95);
+            transform: scale(0.90);
+            filter: brightness(1.25);
+            box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 键盘按下效果 */
+        button.calc-btn.keyboard-pressed {
+            transform: scale(0.90);
+            filter: brightness(1.25);
+            box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
         /* 特殊功能鍵 (AC, +/-, %) */
         .dark .btn-special {
-            background: #4b5563;
+            background: rgba(165, 165, 165, 0.2);
             color: white;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
         .dark .btn-special:hover {
-            background: #6b7280;
+            background: rgba(165, 165, 165, 0.3);
         }
 
         .light .btn-special {
             background: #d1d5db;
             color: black;
+            border-top: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.4);
         }
 
         .light .btn-special:hover {
@@ -224,30 +285,53 @@
         .btn-operator {
             background: #f97316;
             color: white;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 2px 8px rgba(249, 115, 22, 0.2);
         }
 
         .btn-operator:hover {
             background: #fb923c;
         }
 
+        .btn-operator:active {
+            transform: scale(0.90);
+            filter: brightness(1.1);
+            box-shadow: 0 0 20px 4px rgba(249, 115, 22, 0.8),
+                        inset 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        /* 运算符键盘按下效果 */
+        .btn-operator.keyboard-pressed {
+            transform: scale(0.90);
+            filter: brightness(1.1);
+            box-shadow: 0 0 20px 4px rgba(249, 115, 22, 0.8),
+                        inset 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+
         .btn-operator.active {
             background: white;
             color: #f97316;
+            border-top: 1px solid rgba(249, 115, 22, 0.3);
         }
 
         /* 數字鍵 */
         .dark .btn-number {
-            background: #1f2937;
+            background: #2c2c2e;
             color: white;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.08);
         }
 
         .dark .btn-number:hover {
-            background: #374151;
+            background: #3a3a3c;
         }
 
         .light .btn-number {
             background: white;
             color: black;
+            border-top: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.5);
         }
 
         .light .btn-number:hover {
@@ -285,7 +369,7 @@
         /* 膠囊式懸浮狀態列 */
         .floating-status {
             position: absolute;
-            top: 120px;
+            top: 30px;
             left: 50%;
             transform: translateX(-50%) translateY(-10px);
             z-index: 100;
@@ -770,6 +854,8 @@
             user-select: none;
             -webkit-user-select: none;
             transition: color 0.3s;
+            filter: blur(1px);
+            -webkit-filter: blur(1px);
         }
 
         /* 暗色模式下的跑馬燈顏色 (背景色 HSL 的 L 值 +10%) */
@@ -1120,9 +1206,10 @@
             const isSymbol = isNaN(targetNum);
             const isLongString = targetStr.length > 1;
             const isResetJump = Math.abs(startNum) >= 10 && targetNum === 0;
+            const isBigToSmallJump = Math.abs(startNum) >= 10 && Math.abs(targetNum) < 10;
 
-            // 直接設置（符號、長字串、或重置跳轉）
-            if (isSymbol || isLongString || isNaN(startNum) || targetNum === startNum || isResetJump) {
+            // 直接設置（符號、長字串、或大數到小數的跳轉）
+            if (isSymbol || isLongString || isNaN(startNum) || targetNum === startNum || isResetJump || isBigToSmallJump) {
                 bgNumber = targetStr;
                 isRandomMode = false;  // 重置為正常模式
                 updateMarqueeContent(bgNumber, isRandomMode);
@@ -1172,7 +1259,7 @@
             const randomGap = Math.floor(Math.random() * (200 - 20 + 1)) + 20;
             bgGap = randomGap;
 
-            const randomRowGap = Math.floor(Math.random() * (200 - 20 + 1)) + 20;
+            const randomRowGap = Math.floor(Math.random() * 101);
             bgRowGap = randomRowGap;
 
             const randomSize = Math.floor(Math.random() * (200 - 20 + 1)) + 20;
@@ -1464,9 +1551,58 @@
             console.log('[Calculator] State reset');
         };
 
-        // 鍵盤支援
+        // 键盘按键到按钮元素的映射表
+        const keyToButtonMap = {
+            '0': () => document.querySelector('button[onclick*="handleNumber(\'0\')"]'),
+            '1': () => document.querySelector('button[onclick*="handleNumber(\'1\')"]'),
+            '2': () => document.querySelector('button[onclick*="handleNumber(\'2\')"]'),
+            '3': () => document.querySelector('button[onclick*="handleNumber(\'3\')"]'),
+            '4': () => document.querySelector('button[onclick*="handleNumber(\'4\')"]'),
+            '5': () => document.querySelector('button[onclick*="handleNumber(\'5\')"]'),
+            '6': () => document.querySelector('button[onclick*="handleNumber(\'6\')"]'),
+            '7': () => document.querySelector('button[onclick*="handleNumber(\'7\')"]'),
+            '8': () => document.querySelector('button[onclick*="handleNumber(\'8\')"]'),
+            '9': () => document.querySelector('button[onclick*="handleNumber(\'9\')"]'),
+            '.': () => document.querySelector('button[onclick*="handleNumber(\'.\')"]'),
+            '+': () => document.querySelector('button[onclick*="handleOperator(\'+\')"]'),
+            '-': () => document.querySelector('button[onclick*="handleOperator(\'-\')"]'),
+            '*': () => document.querySelector('button[onclick*="handleOperator(\'×\')"]'),
+            '/': () => document.querySelector('button[onclick*="handleOperator(\'÷\')"]'),
+            'Enter': () => document.querySelector('button[onclick*="calculate()"]'),
+            '=': () => document.querySelector('button[onclick*="calculate()"]'),
+            'Backspace': () => document.getElementById('clear-btn'),
+            'Escape': () => document.getElementById('clear-btn')
+        };
+
+        // 添加键盘按下视觉反馈
+        function addKeyboardPressEffect(button) {
+            if (button && !button.classList.contains('keyboard-pressed')) {
+                button.classList.add('keyboard-pressed');
+            }
+        }
+
+        // 移除键盘按下视觉反馈
+        function removeKeyboardPressEffect(button) {
+            if (button) {
+                button.classList.remove('keyboard-pressed');
+            }
+        }
+
+        // 鍵盤支援 - keydown
         document.addEventListener('keydown', (e) => {
+            // 防止重复按下同一按键时的处理
+            if (e.repeat) return;
+
             const key = e.key;
+
+            // 获取对应的按钮元素并添加视觉效果
+            const getButton = keyToButtonMap[key];
+            if (getButton) {
+                const button = getButton();
+                addKeyboardPressEffect(button);
+            }
+
+            // 执行原有的功能
             if (/[0-9]/.test(key)) handleNumber(key);
             if (key === '.') handleNumber('.');
             if (key === 'Enter' || key === '=') { e.preventDefault(); calculate(); }
@@ -1476,6 +1612,18 @@
             if (key === '-') handleOperator('-');
             if (key === '*') handleOperator('×');
             if (key === '/') { e.preventDefault(); handleOperator('÷'); }
+        });
+
+        // 键盘松开事件 - keyup
+        document.addEventListener('keyup', (e) => {
+            const key = e.key;
+
+            // 获取对应的按钮元素并移除视觉效果
+            const getButton = keyToButtonMap[key];
+            if (getButton) {
+                const button = getButton();
+                removeKeyboardPressEffect(button);
+            }
         });
 
         // 初始化
