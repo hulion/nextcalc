@@ -1,0 +1,881 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 16px;
+    transition: all 0.5s ease;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+body.dark {
+    background: #111827;
+    color: white;
+}
+
+body.light {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.calculator {
+    width: 100%;
+    max-width: 340px;
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    transition: all 0.5s ease;
+}
+
+.dark .calculator {
+    background: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid #1f2937;
+}
+
+.light .calculator {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(229, 231, 235, 0.3);
+}
+
+/* 頂部功能列 */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+}
+
+.header-logo {
+    height: 18px;
+    width: auto;
+    opacity: 0.9;
+    transition: all 0.3s;
+}
+
+.header-logo:hover {
+    opacity: 1;
+}
+
+/* 暗色模式：NEXT文字變白色，C2保持橘色 */
+.dark .header-logo {
+    --logo-text-color: #ffffff;
+}
+
+/* 亮色模式：NEXT文字保持黑色，C2保持橘色 */
+.light .header-logo {
+    --logo-text-color: #000000;
+}
+
+.icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 20px;
+}
+
+.dark .icon-btn {
+    background: transparent;
+    color: #9ca3af;
+}
+
+.dark .icon-btn:hover {
+    background: #1f2937;
+}
+
+.light .icon-btn {
+    background: transparent;
+    color: #6b7280;
+}
+
+.light .icon-btn:hover {
+    background: #f3f4f6;
+}
+
+.icon-btn:active {
+    transform: scale(0.95);
+}
+
+/* 顯示螢幕 */
+.display-container {
+    padding: 24px;
+    padding-top: 24px;
+    padding-bottom: 12px;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+}
+
+.previous-input {
+    font-size: 18px;
+    height: 24px;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+}
+
+.dark .previous-input {
+    color: #9ca3af;
+}
+
+.light .previous-input {
+    color: #6b7280;
+}
+
+.display {
+    font-size: 56px;
+    font-weight: 300;
+    letter-spacing: -0.05em;
+    transition: all 0.2s;
+    word-break: break-all;
+}
+
+.display.small {
+    font-size: 42px;
+}
+
+.display.smaller {
+    font-size: 32px;
+}
+
+/* 按鍵區 */
+.buttons {
+    padding: 20px;
+    padding-bottom: 24px;
+    border-radius: 32px 32px 0 0;
+    transition: all 0.5s ease;
+}
+
+.dark .buttons {
+    background: rgba(17, 24, 39, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+}
+
+.dark .buttons::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(17, 24, 39, 0) 0%,
+        rgba(17, 24, 39, 1) 15%
+    );
+    border-radius: 32px 32px 0 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.light .buttons {
+    background: rgba(249, 250, 251, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.light .buttons::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(249, 250, 251, 0) 0%,
+        rgba(249, 250, 251, 1) 15%
+    );
+    border-radius: 32px 32px 0 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.button-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    position: relative;
+    z-index: 2;
+}
+
+button.calc-btn {
+    height: 68px;
+    width: 68px;
+    border-radius: 50%;
+    border: none;
+    font-size: 22px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.1s;
+}
+
+button.calc-btn:active {
+    transform: scale(0.90);
+    filter: brightness(1.25);
+    box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* 键盘按下效果 */
+button.calc-btn.keyboard-pressed {
+    transform: scale(0.90);
+    filter: brightness(1.25);
+    box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* 特殊功能鍵 (AC, +/-, %) */
+.dark .btn-special {
+    background: rgba(165, 165, 165, 0.2);
+    color: white;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.dark .btn-special:hover {
+    background: rgba(165, 165, 165, 0.3);
+}
+
+.light .btn-special {
+    background: #d1d5db;
+    color: black;
+    border-top: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1),
+                inset 0 1px 2px rgba(255, 255, 255, 0.4);
+}
+
+.light .btn-special:hover {
+    background: #9ca3af;
+}
+
+/* 運算符號 (+, -, ×, ÷, =) */
+.btn-operator {
+    background: #f97316;
+    color: white;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.2);
+}
+
+.btn-operator:hover {
+    background: #fb923c;
+}
+
+.btn-operator:active {
+    transform: scale(0.90);
+    filter: brightness(1.1);
+    box-shadow: 0 0 20px 4px rgba(249, 115, 22, 0.8),
+                inset 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* 运算符键盘按下效果 */
+.btn-operator.keyboard-pressed {
+    transform: scale(0.90);
+    filter: brightness(1.1);
+    box-shadow: 0 0 20px 4px rgba(249, 115, 22, 0.8),
+                inset 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+.btn-operator.active {
+    background: white;
+    color: #f97316;
+    border-top: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+/* 數字鍵 */
+.dark .btn-number {
+    background: #2c2c2e;
+    color: white;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.08);
+}
+
+.dark .btn-number:hover {
+    background: #3a3a3c;
+}
+
+.light .btn-number {
+    background: white;
+    color: black;
+    border-top: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08),
+                inset 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.light .btn-number:hover {
+    background: #f3f4f6;
+}
+
+/* 0 按鈕 (兩倍寬) */
+.btn-zero {
+    grid-column: span 2;
+    border-radius: 34px !important;
+    justify-self: start;
+    width: 146px !important;
+    height: 68px !important;
+    text-align: center;
+    padding-left: 0;
+}
+
+.status {
+    text-align: center;
+    padding: 8px;
+    font-size: 12px;
+    min-height: 16px;
+    transition: all 0.3s;
+    display: none;
+}
+
+.dark .status {
+    background: #111827;
+}
+
+.light .status {
+    background: #f9fafb;
+}
+
+/* 膠囊式懸浮狀態列 */
+.floating-status {
+    position: absolute;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    z-index: 100;
+    padding: 8px 20px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    white-space: nowrap;
+}
+
+.floating-status.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.dark .floating-status {
+    background: rgba(31, 41, 55, 0.85);
+    border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.light .floating-status {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.floating-status.status-success {
+    color: #10b981;
+}
+
+.floating-status.status-error {
+    color: #ef4444;
+}
+
+.floating-status.status-info {
+    color: #f97316;
+}
+
+/* 歷史紀錄覆蓋層 */
+.history-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: none;
+    flex-direction: column;
+    z-index: 20;
+    backdrop-filter: blur(20px);
+}
+
+.history-overlay.show {
+    display: flex;
+}
+
+.dark .history-overlay {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+.light .history-overlay {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.history-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.history-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.history-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.history-empty {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+}
+
+.history-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding: 12px;
+    margin-bottom: 16px;
+    border-radius: 12px;
+    transition: all 0.2s;
+}
+
+.dark .history-item {
+    background: #111827;
+    border: 1px solid #1f2937;
+}
+
+.light .history-item {
+    background: #f9fafb;
+    border: 1px solid #f3f4f6;
+}
+
+.history-calc {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.dark .history-calc {
+    color: #9ca3af;
+}
+
+.light .history-calc {
+    color: #6b7280;
+}
+
+.history-result {
+    font-size: 24px;
+    font-weight: 500;
+    color: #f97316;
+}
+
+/* SVG Icons */
+.icon {
+    width: 20px;
+    height: 20px;
+}
+
+/* ==================== 密碼設定彈窗樣式 ==================== */
+.settings-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(10px);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.settings-modal.show {
+    opacity: 1;
+}
+
+.settings-modal.show .settings-overlay-inner {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+.settings-overlay-inner {
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(10px);
+    width: 100%;
+    max-width: 420px;
+    min-height: 600px;
+    border-radius: 40px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    -webkit-user-select: auto;
+    user-select: auto;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lock-icon {
+    width: 20px;
+    height: 20px;
+    color: #f97316;
+}
+
+.settings-header h1 {
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 8px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s;
+}
+
+.close-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.settings-content {
+    flex: 1;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+}
+
+.current-status-card {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.status-info {
+    flex: 1;
+}
+
+.status-label {
+    color: #9ca3af;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.status-value {
+    color: #f97316;
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 8px;
+}
+
+.status-value.not-set {
+    color: #6b7280;
+    letter-spacing: 0;
+    font-size: 24px;
+}
+
+.toggle-visibility-btn {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 12px;
+    border-radius: 12px;
+    transition: all 0.3s;
+}
+
+.toggle-visibility-btn:hover {
+    background: #1f2937;
+    color: #fff;
+}
+
+.form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-section label {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.7;
+}
+
+.form-section input[type="text"] {
+    width: 100%;
+    padding: 16px;
+    font-size: 24px;
+    text-align: center;
+    letter-spacing: 12px;
+    background: #111827;
+    border: 2px solid #1f2937;
+    border-radius: 16px;
+    color: #ffffff;
+    outline: none;
+    transition: all 0.3s;
+    font-family: 'Courier New', monospace;
+}
+
+.form-section input[type="text"]::placeholder {
+    letter-spacing: 8px;
+}
+
+.form-section input:focus {
+    border-color: #f97316;
+}
+
+.input-hint {
+    margin-top: 8px;
+    font-size: 13px;
+    min-height: 20px;
+    transition: all 0.3s;
+}
+
+.input-hint.error {
+    color: #ef4444;
+}
+
+.input-hint.success {
+    color: #10b981;
+}
+
+.input-hint.warning {
+    color: #f59e0b;
+}
+
+.message {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.message.show {
+    display: flex;
+    animation: slideIn 0.3s ease-out;
+}
+
+.message.error {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.message.success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.button-group {
+    display: flex;
+    gap: 12px;
+    margin-top: auto;
+}
+
+.back-btn,
+.submit-btn {
+    flex: 1;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: 700;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.back-btn {
+    background: #374151;
+    color: white;
+}
+
+.back-btn:hover {
+    background: #4b5563;
+    transform: translateY(-2px);
+}
+
+.back-btn:active {
+    transform: scale(0.95);
+}
+
+.submit-btn {
+    background: #f97316;
+    color: white;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+}
+
+.submit-btn:hover {
+    background: #ea580c;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(249, 115, 22, 0.4);
+}
+
+.submit-btn:active {
+    transform: scale(0.95);
+}
+
+.submit-btn:disabled {
+    background: #374151;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ==================== 動態背景跑馬燈效果 ==================== */
+#bgLayer {
+    position: fixed;
+    inset: -100%;
+    width: 300%;
+    height: 300%;
+    pointer-events: none;
+    z-index: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    overflow: hidden;
+    transition: transform 1s ease-in-out;
+    transform-origin: center center;
+}
+
+.marquee-row {
+    display: flex;
+    width: 100%;
+    white-space: nowrap;
+    will-change: transform;
+    transition: opacity 0.3s;
+}
+
+.marquee-item {
+    font-family: 'Barlow', sans-serif;
+    font-weight: 800;
+    font-style: italic;
+    line-height: 1;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: color 0.3s;
+    filter: blur(1px);
+    -webkit-filter: blur(1px);
+}
+
+/* 暗色模式下的跑馬燈顏色 (背景色 HSL 的 L 值 +10%) */
+.dark .marquee-item {
+    color: hsl(220, 52%, 19%);
+}
+
+/* 亮色模式下的跑馬燈顏色 */
+.light .marquee-item {
+    color: #cbd5e1;
+}
+
+/* 跑馬燈動畫 - 向左 */
+@keyframes marquee-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+/* 跑馬燈動畫 - 向右 */
+@keyframes marquee-right {
+    0% { transform: translateX(-50%); }
+    100% { transform: translateX(0); }
+}
+
+/* 呼吸縮放動畫 */
+@keyframes pulse-scale {
+    0% { transform: scale(0.1); }
+    100% { transform: scale(2.0); }
+}
+
+.calculator {
+    position: relative;
+    z-index: 10;
+}

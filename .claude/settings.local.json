@@ -4,7 +4,10 @@
       "Bash(git commit:*)",
       "WebSearch",
       "Bash(ls:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(tree:*)",
+      "Bash(npm run lint:*)",
+      "Bash(node -e:*)"
     ],
     "deny": [],
     "ask": []
