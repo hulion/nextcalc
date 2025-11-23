@@ -631,8 +631,9 @@ button.calc-btn.keyboard-pressed {
 .status-value {
     color: #f97316;
     font-size: 28px;
-    font-weight: 700;
-    font-family: 'Courier New', monospace;
+    font-weight: 800;
+    font-family: 'Barlow', sans-serif;
+    font-style: normal;
     letter-spacing: 8px;
 }
 
@@ -674,6 +675,7 @@ button.calc-btn.keyboard-pressed {
     width: 100%;
     padding: 16px;
     font-size: 24px;
+    font-weight: 800;
     text-align: center;
     letter-spacing: 12px;
     background: #111827;
@@ -682,7 +684,8 @@ button.calc-btn.keyboard-pressed {
     color: #ffffff;
     outline: none;
     transition: all 0.3s;
-    font-family: 'Courier New', monospace;
+    font-family: 'Barlow', sans-serif;
+    font-style: normal;
 }
 
 .form-section input[type="text"]::placeholder {

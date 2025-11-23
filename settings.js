@@ -62,22 +62,35 @@ function togglePasswordVisibility() {
     }
 }
 
-// 顯示訊息
-function showMessage(text, type) {
-    messageText.textContent = text;
-    message.className = `message show ${type}`;
+// 顯示浮動通知（與計算機鎖定畫面一致）
+function showFloatingStatus(text, type = 'info') {
+    const floatingStatus = document.getElementById('floatingStatus');
+    floatingStatus.textContent = text;
 
-    // 更新圖示
+    // 移除所有狀態類別
+    floatingStatus.classList.remove('status-success', 'status-error', 'status-info');
+
+    // 添加對應狀態類別
     if (type === 'success') {
-        messageIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
+        floatingStatus.classList.add('status-success');
+    } else if (type === 'error') {
+        floatingStatus.classList.add('status-error');
     } else {
-        messageIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+        floatingStatus.classList.add('status-info');
     }
 
-    // 3秒後自動隱藏
+    // 顯示通知
+    floatingStatus.classList.add('show');
+
+    // 2秒後自動隱藏
     setTimeout(() => {
-        message.classList.remove('show');
-    }, 3000);
+        floatingStatus.classList.remove('show');
+    }, 2000);
+}
+
+// 顯示訊息（保持向後兼容）
+function showMessage(text, type) {
+    showFloatingStatus(text, type);
 }
 
 // 限制輸入只能是數字並顯示提示
@@ -253,6 +266,8 @@ document.addEventListener('mouseup', () => {
 
 // Tab 切換功能
 function switchTab(tabName) {
+    const fadeOverlay = document.querySelector('.scroll-fade-overlay');
+
     // 移除所有 active class
     document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
@@ -260,11 +275,27 @@ function switchTab(tabName) {
     // 添加 active class 到選中的 tab
     if (tabName === 'password') {
         document.querySelector('.tab[onclick="switchTab(\'password\')"]').classList.add('active');
-        document.getElementById('passwordTab').classList.add('active');
+        const passwordTab = document.getElementById('passwordTab');
+        passwordTab.classList.add('active');
+
+        // 檢查滾動狀態
+        if (passwordTab.scrollTop > 0) {
+            fadeOverlay.classList.add('visible');
+        } else {
+            fadeOverlay.classList.remove('visible');
+        }
     } else if (tabName === 'idle') {
         document.querySelector('.tab[onclick="switchTab(\'idle\')"]').classList.add('active');
-        document.getElementById('idleTab').classList.add('active');
+        const idleTab = document.getElementById('idleTab');
+        idleTab.classList.add('active');
         loadIdleTime();
+
+        // 檢查滾動狀態
+        if (idleTab.scrollTop > 0) {
+            fadeOverlay.classList.add('visible');
+        } else {
+            fadeOverlay.classList.remove('visible');
+        }
     }
 }
 
@@ -318,26 +349,30 @@ async function saveIdleTime() {
 }
 
 function showIdleMessage(text, type) {
-    const idleMessage = document.getElementById('idleMessage');
-    const idleMessageText = document.getElementById('idleMessageText');
-    const idleMessageIcon = document.getElementById('idleMessageIcon');
+    showFloatingStatus(text, type);
+}
 
-    idleMessageText.textContent = text;
-    idleMessage.className = `message show ${type}`;
+// 設定滾動淡出效果
+function setupScrollFadeEffect() {
+    const fadeOverlay = document.querySelector('.scroll-fade-overlay');
+    const tabPanes = document.querySelectorAll('.tab-pane');
 
-    if (type === 'success') {
-        idleMessageIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
-    } else {
-        idleMessageIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
-    }
-
-    setTimeout(() => {
-        idleMessage.classList.remove('show');
-    }, 3000);
+    tabPanes.forEach(pane => {
+        pane.addEventListener('scroll', () => {
+            if (pane.classList.contains('active')) {
+                if (pane.scrollTop > 0) {
+                    fadeOverlay.classList.add('visible');
+                } else {
+                    fadeOverlay.classList.remove('visible');
+                }
+            }
+        });
+    });
 }
 
 // 初始化
 loadCurrentPassword();
+setupScrollFadeEffect();
 
 // Enter 鍵送出
 confirmPasswordInput.addEventListener('keypress', (e) => {
@@ -345,3 +380,17 @@ confirmPasswordInput.addEventListener('keypress', (e) => {
         savePassword();
     }
 });
+
+// 閒置時間說明提示
+const infoIconWrapper = document.querySelector('.info-icon-wrapper');
+const infoTooltip = document.getElementById('infoTooltip');
+
+if (infoIconWrapper && infoTooltip) {
+    infoIconWrapper.addEventListener('mouseenter', () => {
+        infoTooltip.classList.add('show');
+    });
+
+    infoIconWrapper.addEventListener('mouseleave', () => {
+        infoTooltip.classList.remove('show');
+    });
+}
