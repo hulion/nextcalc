@@ -97,6 +97,10 @@
                     span.style.opacity = 0.1 + Math.random() * 0.7;  // 每個數字獨立透明度 0.1-0.8
                     span.style.animation = `pulse-scale ${3 + Math.random() * 4}s ease-in-out infinite alternate`;
                     span.style.animationDelay = `${Math.random() * 5}s`;
+                    // 隨機模糊效果 1px 到 5px
+                    const randomBlur = 1 + Math.random() * 4;
+                    span.style.filter = `blur(${randomBlur}px)`;
+                    span.style.webkitFilter = `blur(${randomBlur}px)`;
                     rowDiv.appendChild(span);
                 }
 

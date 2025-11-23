@@ -27,26 +27,195 @@ body.light {
 }
 
 .calculator {
+    --corner-radius: 40px;
+    --base-strength: 14px;
+    --extra-blur: 2px;
+    --softness: 12px;
+    --tint-amount: 0.06;
+    --tint-saturation: 2;
+    --contrast: 1;
+    --brightness: 1;
+    --total-strength: calc(var(--base-strength) + var(--extra-blur));
+    --edge-width: calc(0.3px + (var(--softness) * 0.1));
+    --emboss-width: calc((var(--softness) * 0.38));
+    --refraction-width: calc((var(--softness) * 0.3));
+
     width: 100%;
     max-width: 340px;
-    border-radius: 40px;
-    overflow: hidden;
+    border-radius: var(--corner-radius);
+    overflow: visible;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     transition: all 0.5s ease;
+    position: relative;
+    pointer-events: none;
 }
 
 .dark .calculator {
-    background: rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid #1f2937;
+    --tint-hue: 200deg;
+    --invert: 10%;
+    background: rgba(0, 0, 0, 0);
 }
 
 .light .calculator {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(229, 231, 235, 0.3);
+    --tint-hue: 30deg;
+    --invert: 8%;
+    --base-strength: 18px;
+    --extra-blur: 3px;
+    --brightness: 1.05;
+    --contrast: 1.1;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* 玻璃材質系統 - 核心樣式 */
+.calculator > *:not(.GlassMaterial) {
+    position: relative;
+    z-index: 100;
+    pointer-events: auto;
+}
+
+.GlassMaterial {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.light .GlassMaterial {
+    opacity: 0.5;
+}
+
+.GlassMaterial:after {
+    content: '';
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    overflow: hidden;
+    border-radius: var(--corner-radius);
+    background-color: rgba(128, 128, 128, 0);
+}
+
+.GlassMaterial > div {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-radius: var(--corner-radius);
+    z-index: 2;
+    overflow: hidden;
+}
+
+.GlassMaterial .GlassEdgeReflection {
+    z-index: 4;
+    margin: calc(var(--total-strength) * -1);
+    border-radius: calc(var(--corner-radius) + var(--total-strength));
+    backdrop-filter: blur(var(--total-strength)) brightness(1.2) saturate(1.2);
+    -webkit-backdrop-filter: blur(var(--total-strength)) brightness(1.2) saturate(1.2);
+    padding: var(--edge-width);
+    border: var(--total-strength) solid transparent;
+    mask:
+        linear-gradient(white 0 0) padding-box,
+        linear-gradient(white 0 0) content-box;
+    -webkit-mask:
+        linear-gradient(white 0 0) padding-box,
+        linear-gradient(white 0 0) content-box;
+    mask-composite: exclude, exclude;
+    -webkit-mask-composite: xor;
+}
+
+.GlassMaterial .GlassEmbossReflection {
+    backdrop-filter: blur(calc(var(--total-strength) * 1.5)) invert(0.25) brightness(1.11) saturate(1.2) hue-rotate(-10deg) contrast(2.3);
+    -webkit-backdrop-filter: blur(calc(var(--total-strength) * 1.5)) invert(0.25) brightness(1.11) saturate(1.2) hue-rotate(-10deg) contrast(2.3);
+    padding: var(--emboss-width);
+    border: 0 solid transparent;
+    mask:
+        linear-gradient(white 0 0) padding-box,
+        linear-gradient(white 0 0) content-box;
+    -webkit-mask:
+        linear-gradient(white 0 0) padding-box,
+        linear-gradient(white 0 0) content-box;
+    mask-composite: exclude, exclude;
+    -webkit-mask-composite: xor;
+}
+
+.GlassMaterial .GlassRefraction {
+    backdrop-filter: invert(0.1) brightness(1.2) contrast(1.5);
+    -webkit-backdrop-filter: invert(0.1) brightness(1.2) contrast(1.5);
+    padding: var(--refraction-width);
+    border: calc(var(--emboss-width)) solid transparent;
+    mask:
+        linear-gradient(white 0 0) padding-box,
+        linear-gradient(white 0 0) content-box;
+    -webkit-mask:
+        linear-gradient(white 0 0) padding-box,
+        linear-gradient(white 0 0) content-box;
+    mask-composite: exclude, exclude;
+    -webkit-mask-composite: xor;
+}
+
+.GlassMaterial .GlassBlur {
+    backdrop-filter: blur(var(--extra-blur)) brightness(1.25);
+    -webkit-backdrop-filter: blur(var(--extra-blur)) brightness(1.25);
+    border-radius: calc(var(--corner-radius) - (var(--emboss-width) + var(--refraction-width)));
+    margin: calc(var(--emboss-width) + var(--refraction-width));
+}
+
+.GlassMaterial .BlendLayers {
+    z-index: 3;
+    backdrop-filter: blur(calc((var(--softness) * 0.2) + (var(--extra-blur) * 0.2)));
+    -webkit-backdrop-filter: blur(calc((var(--softness) * 0.2) + (var(--extra-blur) * 0.2)));
+}
+
+.GlassMaterial .BlendEdge {
+    z-index: 8;
+    backdrop-filter: blur(calc(var(--edge-width) * 0.4)) contrast(1.6) saturate(1.5);
+    -webkit-backdrop-filter: blur(calc(var(--edge-width) * 0.4)) contrast(1.6) saturate(1.5);
+}
+
+.GlassMaterial:before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 11;
+    display: block;
+    border-radius: var(--corner-radius);
+    padding: 1px;
+    border: 0 solid transparent;
+    background: linear-gradient(155deg, hsla(0, 0%, 100%, 0.15) 0%, hsla(0, 0%, 0%, 0.2) 50%, hsla(0, 0%, 100%, 0.15) 100%);
+    backdrop-filter: invert(0.15) opacity(1);
+    -webkit-backdrop-filter: invert(0.15) opacity(1);
+    mask:
+        linear-gradient(white 0 0) padding-box,
+        linear-gradient(white 0 0) content-box;
+    -webkit-mask:
+        linear-gradient(white 0 0) padding-box,
+        linear-gradient(white 0 0) content-box;
+    mask-composite: exclude, exclude;
+    -webkit-mask-composite: xor;
+}
+
+.GlassMaterial .Highlight {
+    z-index: 12;
+    display: block;
+    border-radius: var(--corner-radius);
+    padding: 1px;
+    border: 0 solid transparent;
+    backdrop-filter: brightness(1.2) contrast(1.6) saturate(1.2) opacity(1);
+    -webkit-backdrop-filter: brightness(1.2) contrast(1.6) saturate(1.2) opacity(1);
+    mask:
+        linear-gradient(white 0 0) padding-box,
+        linear-gradient(white 0 0) content-box;
+    -webkit-mask:
+        linear-gradient(white 0 0) padding-box,
+        linear-gradient(white 0 0) content-box;
+    mask-composite: exclude, exclude;
+    -webkit-mask-composite: xor;
+}
+
+.GlassMaterial .Tint {
+    z-index: 9;
+    backdrop-filter: sepia(1.0) saturate(var(--tint-saturation)) hue-rotate(var(--tint-hue)) opacity(var(--tint-amount));
+    -webkit-backdrop-filter: sepia(1.0) saturate(var(--tint-saturation)) hue-rotate(var(--tint-hue)) opacity(var(--tint-amount));
 }
 
 /* 頂部功能列 */
@@ -160,7 +329,8 @@ body.light {
 .buttons {
     padding: 20px;
     padding-bottom: 24px;
-    border-radius: 32px 32px 0 0;
+    border-radius: 32px;
+    overflow: hidden;
     transition: all 0.5s ease;
 }
 
@@ -182,17 +352,17 @@ body.light {
     background: linear-gradient(
         to bottom,
         rgba(17, 24, 39, 0) 0%,
-        rgba(17, 24, 39, 1) 15%
+        rgba(17, 24, 39, 1) 50%
     );
-    border-radius: 32px 32px 0 0;
+    border-radius: 32px;
     pointer-events: none;
     z-index: 1;
 }
 
 .light .buttons {
-    background: rgba(249, 250, 251, 0.4);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(249, 250, 251, 0);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     border-top: 1px solid rgba(0, 0, 0, 0.1);
     position: relative;
 }
@@ -206,8 +376,8 @@ body.light {
     bottom: 0;
     background: linear-gradient(
         to bottom,
-        rgba(249, 250, 251, 0) 0%,
-        rgba(249, 250, 251, 1) 15%
+        rgba(249, 250, 251, 0) 30%,
+        rgba(249, 250, 251, 1) 50%
     );
     border-radius: 32px 32px 0 0;
     pointer-events: none;
@@ -309,6 +479,20 @@ button.calc-btn.keyboard-pressed {
     color: white;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
     box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.08);
+    position: relative;
+}
+
+.dark .btn-number::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50%;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+    z-index: -1;
 }
 
 .dark .btn-number:hover {
@@ -357,7 +541,7 @@ button.calc-btn.keyboard-pressed {
 
 /* 膠囊式懸浮狀態列 */
 .floating-status {
-    position: absolute;
+    position: absolute !important;
     top: 30px;
     left: 50%;
     transform: translateX(-50%) translateY(-10px);
@@ -412,12 +596,15 @@ button.calc-btn.keyboard-pressed {
     bottom: 0;
     display: none;
     flex-direction: column;
-    z-index: 20;
+    z-index: 200;
     backdrop-filter: blur(20px);
+    border-radius: var(--corner-radius);
+    overflow: hidden;
 }
 
 .history-overlay.show {
     display: flex;
+    position: absolute;
 }
 
 .dark .history-overlay {
@@ -471,8 +658,8 @@ button.calc-btn.keyboard-pressed {
 }
 
 .dark .history-item {
-    background: #111827;
-    border: 1px solid #1f2937;
+    background: #111827a6;
+    border: 1px solid #1f2937e;
 }
 
 .light .history-item {
@@ -846,8 +1033,6 @@ button.calc-btn.keyboard-pressed {
     user-select: none;
     -webkit-user-select: none;
     transition: color 0.3s;
-    filter: blur(1px);
-    -webkit-filter: blur(1px);
 }
 
 /* 暗色模式下的跑馬燈顏色 (背景色 HSL 的 L 值 +10%) */
