@@ -7,3 +7,4 @@ build/Release/
 *.dmg
 *.zip
 out/
+.claude/settings.local.json
