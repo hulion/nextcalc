@@ -37,37 +37,12 @@ class MenuBuilder {
   build() {
     const isUnlocked = this.lockManager ? this.lockManager.getUnlocked() : false;
 
-    // Build View submenu items based on unlock status
+    // Build View submenu items
     const viewSubmenu = [
       { role: 'reload' },
-      { role: 'forceReload' }
+      { role: 'forceReload' },
+      { type: 'separator' }
     ];
-
-    // Only show DevTools in development mode
-    if (!app.isPackaged) {
-      viewSubmenu.push({ role: 'toggleDevTools' });
-      viewSubmenu.push({ type: 'separator' });
-      viewSubmenu.push({
-        label: 'Test Mandatory Update',
-        click: () => {
-          console.log('[MenuBuilder] Test mandatory update flow triggered');
-          if (this.updateManager) {
-            this.updateManager.testUpdateFlow(true);
-          }
-        }
-      });
-      viewSubmenu.push({
-        label: 'Test Optional Update',
-        click: () => {
-          console.log('[MenuBuilder] Test optional update flow triggered');
-          if (this.updateManager) {
-            this.updateManager.testUpdateFlow(false);
-          }
-        }
-      });
-    }
-
-    viewSubmenu.push({ type: 'separator' });
 
     // Only show these items when unlocked
     if (isUnlocked) {
@@ -90,20 +65,6 @@ class MenuBuilder {
             console.log('[MenuBuilder] Manual lock triggered from menu');
             if (this.lockManager) {
               this.lockManager.lockApp();
-            }
-          }
-        });
-      }
-
-      // Test Notifications - only in development mode
-      if (!app.isPackaged) {
-        viewSubmenu.push({
-          label: 'Test Notifications',
-          click: () => {
-            if (this.mainWindow) {
-              this.mainWindow.loadFile('test-notification.html').then(() => {
-                this.build(); // Rebuild menu after switching
-              });
             }
           }
         });
@@ -161,6 +122,43 @@ class MenuBuilder {
         ]
       }
     ];
+
+    // Test menu - only in development mode
+    if (!app.isPackaged) {
+      template.push({
+        label: 'Test',
+        submenu: [
+          { role: 'toggleDevTools' },
+          { type: 'separator' },
+          {
+            label: 'Test Mandatory Update',
+            click: () => {
+              if (this.updateManager) {
+                this.updateManager.testUpdateFlow(true);
+              }
+            }
+          },
+          {
+            label: 'Test Optional Update',
+            click: () => {
+              if (this.updateManager) {
+                this.updateManager.testUpdateFlow(false);
+              }
+            }
+          },
+          {
+            label: 'Test Notifications',
+            click: () => {
+              if (this.mainWindow) {
+                this.mainWindow.loadFile('test-notification.html').then(() => {
+                  this.build();
+                });
+              }
+            }
+          }
+        ]
+      });
+    }
 
     const menu = Menu.buildFromTemplate(template);
     Menu.setApplicationMenu(menu);
