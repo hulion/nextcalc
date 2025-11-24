@@ -397,3 +397,34 @@ npm run build
 1. 網路連線問題
 2. GitHub Release 檔案損壞
 3. 權限不足無法寫入暫存目錄
+
+## 實驗記錄
+
+### 失敗實驗：鎖定時隱藏通知內容 (2025-11-24)
+
+**目標**: 實作當應用程式鎖定時，通知顯示「NEXT Calc - 您有新訊息」而非完整訊息內容
+
+**嘗試的方法**:
+1. ✗ **preload.js 的 Notification API 覆寫** - Service Worker 不使用此 API
+2. ✗ **注入 ServiceWorkerRegistration.prototype.showNotification 攔截器** - 攔截器成功注入但從未被調用
+3. ✗ **清除 Service Worker 快取** - Service Worker 仍然繞過攔截
+4. ✗ **在主進程層級監聽 IPC 和其他事件** - 沒有任何事件被觸發
+
+**結論**:
+**Telegram Web 的 Service Worker 通知完全繞過了 Electron 的 JavaScript 層級**，直接從 Chromium 底層到達 macOS 系統通知中心。無法在 JavaScript 或 Electron API 層級攔截這些通知。
+
+**為什麼無法攔截**:
+- Service Worker 運行在獨立的執行緒和隔離的上下文中
+- Service Worker 的通知 API 調用直接通過 Chromium 的原生實作
+- JavaScript 層級的 API 覆寫對已運行的 Service Worker 無效
+- Electron 沒有提供主進程層級的通知攔截 API
+
+**可能的替代方案** (未實作):
+- 使用 Electron protocol API 攔截並修改 Service Worker 腳本文件本身（技術複雜度極高）
+- 改為「鎖定時完全禁用通知」而非「隱藏內容」（功能降級）
+- 接受限制，不實作此功能
+
+**學到的教訓**:
+- Service Worker 通知無法在應用程式層級攔截
+- 需要更深層的系統層級介入才能修改 Service Worker 行為
+- 在規劃功能前應先驗證技術可行性
