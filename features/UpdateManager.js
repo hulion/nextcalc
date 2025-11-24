@@ -14,7 +14,7 @@ class UpdateManager {
     this.isDevelopment = false;
 
     // 配置 autoUpdater
-    autoUpdater.autoDownload = true; // 自動下載
+    autoUpdater.autoDownload = false; // 不自動下載,讓使用者選擇
     autoUpdater.autoInstallOnAppQuit = false; // 不自動安裝,讓使用者選擇
   }
 
@@ -72,6 +72,14 @@ class UpdateManager {
         releaseNotes: info.releaseNotes,
         isMandatory: isMandatory
       });
+
+      // 如果是必須更新，自動開始下載
+      if (isMandatory) {
+        console.log('[UpdateManager] Mandatory update - starting automatic download');
+        autoUpdater.downloadUpdate();
+      } else {
+        console.log('[UpdateManager] Optional update - waiting for user action');
+      }
     });
 
     // 沒有可用更新
@@ -123,6 +131,42 @@ class UpdateManager {
     } catch (error) {
       console.error('[UpdateManager] Failed to check for updates:', error);
     }
+  }
+
+  /**
+   * 開始下載更新
+   */
+  downloadUpdate() {
+    if (this.isDevelopment) {
+      console.log('[UpdateManager] Development mode - using test download');
+      // 在開發模式下模擬下載過程
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += 10;
+        if (progress <= 100) {
+          console.log(`[UpdateManager] Test: Download progress ${progress}%`);
+          this.sendToRenderer('update-progress', {
+            percent: progress,
+            transferred: progress * 1024 * 1024,
+            total: 100 * 1024 * 1024,
+            bytesPerSecond: 5 * 1024 * 1024
+          });
+        }
+        if (progress >= 100) {
+          clearInterval(progressInterval);
+          setTimeout(() => {
+            console.log('[UpdateManager] Test: Update downloaded');
+            this.sendToRenderer('update-downloaded', {
+              version: this.updateInfo?.version || '99.99.99'
+            });
+          }, 500);
+        }
+      }, 300);
+      return;
+    }
+
+    console.log('[UpdateManager] Starting update download...');
+    autoUpdater.downloadUpdate();
   }
 
   /**
@@ -190,36 +234,19 @@ class UpdateManager {
         isMandatory: isMandatory
       };
 
+      // 儲存更新資訊供後續使用
+      this.updateInfo = mockUpdateInfo;
+
       console.log('[UpdateManager] Test: Update available');
       this.sendToRenderer('update-available', mockUpdateInfo);
 
-      // 步驟 2: 模擬下載進度 (從 0% 到 100%)
-      let progress = 0;
-      const progressInterval = setInterval(() => {
-        progress += 10;
-
-        if (progress <= 100) {
-          console.log(`[UpdateManager] Test: Download progress ${progress}%`);
-          this.sendToRenderer('update-progress', {
-            percent: progress,
-            transferred: progress * 1024 * 1024, // 模擬已下載大小
-            total: 100 * 1024 * 1024, // 模擬總大小 100MB
-            bytesPerSecond: 5 * 1024 * 1024 // 模擬速度 5MB/s
-          });
-        }
-
-        if (progress >= 100) {
-          clearInterval(progressInterval);
-
-          // 步驟 3: 模擬下載完成 (100% 後 0.5 秒)
-          setTimeout(() => {
-            console.log('[UpdateManager] Test: Update downloaded');
-            this.sendToRenderer('update-downloaded', {
-              version: '99.99.99'
-            });
-          }, 500);
-        }
-      }, 300); // 每 300ms 增加 10%
+      // 步驟 2: 如果是必須更新，自動開始下載；否則等待使用者手動觸發
+      if (isMandatory) {
+        console.log('[UpdateManager] Test: Mandatory update - starting automatic download');
+        this.downloadUpdate();
+      } else {
+        console.log('[UpdateManager] Test: Optional update - waiting for user to click download button');
+      }
     }, 1000);
   }
 

@@ -77,6 +77,7 @@ class IPCHandler {
 
     // === 自動更新 ===
     this.register('install-update', this.handleInstallUpdate.bind(this));
+    this.register('download-update', this.handleDownloadUpdate.bind(this));
 
     console.log('[IPCHandler] All handlers registered');
   }
@@ -283,6 +284,18 @@ class IPCHandler {
    */
   async handleIsDevelopment() {
     return this.isDev;
+  }
+
+  /**
+   * 處理下載更新
+   */
+  async handleDownloadUpdate() {
+    console.log('[IPCHandler] Download update requested');
+    if (this.updateManager) {
+      this.updateManager.downloadUpdate();
+      return true;
+    }
+    return false;
   }
 
   /**

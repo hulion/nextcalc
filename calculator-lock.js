@@ -1160,7 +1160,17 @@
             // 隱藏進度條,啟用安裝按鈕
             progressContainer.style.display = 'none';
             installBtn.disabled = false;
-            installBtn.textContent = '立即重啟安裝';
+
+            // 根據更新類型設定按鈕文字
+            if (updateInfo.isMandatory) {
+                // 必須更新會自動下載，按鈕顯示「立即重啟安裝」
+                installBtn.textContent = '立即重啟安裝';
+                installBtn.dataset.downloaded = 'false'; // 標記尚未下載
+            } else {
+                // 可選更新不自動下載，按鈕顯示「開始下載」
+                installBtn.textContent = '開始下載';
+                installBtn.dataset.downloaded = 'false'; // 標記尚未下載
+            }
 
             // 根據更新類型控制樣式、標題和按鈕可見性
             if (updateInfo.isMandatory) {
@@ -1185,7 +1195,75 @@
                 notification.classList.add('show');
             }, 10);
 
+            // 如果是可選更新，啟用拖移功能
+            if (!updateInfo.isMandatory) {
+                initializeDraggable(notification);
+            }
+
             console.log('[Calculator] Update notification shown:', updateInfo.version, 'isMandatory:', updateInfo.isMandatory);
+        }
+
+        // 初始化拖移功能
+        function initializeDraggable(element) {
+            const card = element.querySelector('.update-card');
+            const header = element.querySelector('.update-header');
+
+            if (!card || !header) return;
+
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+            let xOffset = 0;
+            let yOffset = 0;
+
+            // 添加視覺提示
+            header.style.cursor = 'move';
+
+            header.addEventListener('mousedown', dragStart);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', dragEnd);
+
+            function dragStart(e) {
+                // 如果點擊的是關閉按鈕，不啟動拖移
+                if (e.target.closest('#updateCloseBtn')) return;
+
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+
+                if (e.target === header || header.contains(e.target)) {
+                    isDragging = true;
+                    card.style.transition = 'none';
+                }
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+
+                    xOffset = currentX;
+                    yOffset = currentY;
+
+                    setTranslate(currentX, currentY, card);
+                }
+            }
+
+            function dragEnd(e) {
+                if (isDragging) {
+                    initialX = currentX;
+                    initialY = currentY;
+                    isDragging = false;
+                    card.style.transition = '';
+                }
+            }
+
+            function setTranslate(xPos, yPos, el) {
+                el.style.transform = `translate(${xPos}px, ${yPos}px)`;
+            }
         }
 
         // 更新下載進度
@@ -1217,9 +1295,10 @@
             // 隱藏進度條
             progressContainer.style.display = 'none';
 
-            // 啟用安裝按鈕
+            // 啟用安裝按鈕，變更文字為「立即重啟安裝」
             installBtn.disabled = false;
             installBtn.textContent = '立即重啟安裝';
+            installBtn.dataset.downloaded = 'true'; // 標記已下載完成
 
             console.log('[Calculator] Update download complete:', updateInfo.version);
         }
@@ -1233,15 +1312,27 @@
             }, 300);
         }
 
-        // 安裝更新
+        // 安裝更新（或開始下載）
         async function installUpdate() {
+            const installBtn = document.getElementById('updateInstallBtn');
+            const isDownloaded = installBtn.dataset.downloaded === 'true';
+
+            if (!isDownloaded) {
+                // 尚未下載，開始下載
+                console.log('[Calculator] Starting update download...');
+                if (window.electronAPI && window.electronAPI.downloadUpdate) {
+                    window.electronAPI.downloadUpdate();
+                }
+                return;
+            }
+
+            // 已下載完成，執行安裝
             if (window.electronAPI && window.electronAPI.installUpdate) {
                 // 檢查是否為開發模式
                 const isDev = await window.electronAPI.isDevelopment();
 
                 if (isDev) {
                     // 測試模式：顯示訊息後關閉通知
-                    const installBtn = document.getElementById('updateInstallBtn');
                     installBtn.textContent = '✓ 測試完成（不會真的重啟）';
                     installBtn.disabled = true;
                     installBtn.style.background = '#10b981'; // 綠色

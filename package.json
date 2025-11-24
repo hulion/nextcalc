@@ -34,6 +34,28 @@
   "build": {
     "appId": "com.nextcalc.app",
     "productName": "NextCalc",
+    "files": [
+      "main.js",
+      "preload.js",
+      "calculator-lock.js",
+      "calculator-lock.html",
+      "calculator-lock.css",
+      "panic-detector.js",
+      "settings.js",
+      "settings.html",
+      "settings.css",
+      "next-logo.svg",
+      "config/**/*",
+      "features/**/*",
+      "ipc/**/*",
+      "menu/**/*",
+      "window/**/*",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
     "mac": {
       "category": "public.app-category.social-networking",
       "icon": "build/icon.icns",
