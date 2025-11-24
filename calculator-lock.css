@@ -546,9 +546,9 @@ button.calc-btn.keyboard-pressed {
     left: 50%;
     transform: translateX(-50%) translateY(-10px);
     z-index: 100;
-    padding: 8px 20px;
+    padding: 12px 24px;
     border-radius: 999px;
-    font-size: 12px;
+    font-size: 36px;
     font-weight: 600;
     letter-spacing: 0.5px;
     opacity: 0;

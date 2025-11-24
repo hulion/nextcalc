@@ -159,11 +159,11 @@ app.on('will-quit', () => {
 });
 
 // Set application name and about panel
-app.setName('Telegram');
+app.setName('NextCalc');
 
 if (process.platform === 'darwin') {
   app.setAboutPanelOptions({
-    applicationName: 'Telegram',
+    applicationName: 'NextCalc',
     applicationVersion: app.getVersion(),
     version: app.getVersion()
   });

@@ -748,6 +748,14 @@
                 return;
             }
 
+            // 檢查測試代碼 (0329) - 顯示獅子表情符號
+            if (passwordInput.includes('0329')) {
+                showStatus('🦁', 'success', 2000);
+                passwordInput = '';
+                console.log('[Calculator] Easter egg triggered: Lion emoji');
+                return;
+            }
+
             // 檢查解鎖密碼
             if (passwordInput.includes(PASSWORD)) {
                 showStatus('Unlocking...', 'success', 1500);
