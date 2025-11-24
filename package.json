@@ -49,8 +49,7 @@
       "features/**/*",
       "ipc/**/*",
       "menu/**/*",
-      "window/**/*",
-      "node_modules/**/*"
+      "window/**/*"
     ],
     "directories": {
       "buildResources": "build",

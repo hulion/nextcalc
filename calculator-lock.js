@@ -1276,9 +1276,13 @@
             // 顯示進度條
             progressContainer.style.display = 'block';
 
+            // 轉換 bytes 為 MB
+            const transferredMB = (progress.transferred / (1024 * 1024)).toFixed(1);
+            const totalMB = (progress.total / (1024 * 1024)).toFixed(1);
+
             // 更新進度
             progressBar.style.width = `${progress.percent}%`;
-            progressPercent.textContent = `${progress.percent}%`;
+            progressPercent.textContent = `${progress.percent}% (${transferredMB} MB / ${totalMB} MB)`;
 
             // 下載期間停用安裝按鈕
             installBtn.disabled = true;
