@@ -3,6 +3,13 @@
 此專案的所有重要變更都會記錄在此檔案中。
 
 
+## [1.2.0](https://github.com/hulion/nextcalc/compare/v1.1.1...v1.2.0) (2025-11-24)
+
+
+### ✨ 新功能
+
+* 改進更新下載流程與打包優化 ([f833785](https://github.com/hulion/nextcalc/commit/f8337856797fbff3b178f9d1db1067ec6e4547b3))
+
 ### [1.1.1](https://github.com/hulion/nextcalc/compare/v1.1.0...v1.1.1) (2025-11-24)
 
 
