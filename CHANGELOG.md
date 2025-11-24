@@ -3,6 +3,13 @@
 此專案的所有重要變更都會記錄在此檔案中。
 
 
+## [1.3.0](https://github.com/hulion/nextcalc/compare/v1.2.0...v1.3.0) (2025-11-24)
+
+
+### ✨ 新功能
+
+* 新增下載進度 MB 顯示功能 ([c703733](https://github.com/hulion/nextcalc/commit/c7037332f65cb32907c2095072a237bfd95c4b02))
+
 ## [1.2.0](https://github.com/hulion/nextcalc/compare/v1.1.1...v1.2.0) (2025-11-24)
 
 
