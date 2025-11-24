@@ -18,6 +18,10 @@
 npm install              # 安裝相依套件
 npm start               # 啟動開發模式應用程式
 npm run build           # 建置 macOS DMG 安裝檔
+npm run release         # 根據 commits 自動升版並生成 CHANGELOG
+npm run release:patch   # 強制升 patch 版本 (1.0.0 → 1.0.1)
+npm run release:minor   # 強制升 minor 版本 (1.0.0 → 1.1.0)
+npm run release:major   # 強制升 major 版本 (1.0.0 → 2.0.0)
 ```
 
 開發期間重啟應用程式:
@@ -186,3 +190,92 @@ MenuBuilder 根據以下條件動態建立選單:
 - 緊急模式 "4444" 序列是硬編碼的 (不可設定以防忘記)
 - BrowserView 畫面外定位並非加密安全 (記憶體取證可能恢復)
 - 緊急清除刪除檔案但不安全抹除 (SSD TRIM 可能使恢復困難)
+
+## Git Commit 規範
+
+**重要:此專案使用 Conventional Commits 規範,所有 commit 都必須遵循以下格式。**
+
+### Commit 訊息格式
+
+```
+<type>: <subject>
+
+[optional body]
+
+[optional footer]
+```
+
+### 允許的 Type
+
+- **feat**: 新功能 (會升 minor 版本)
+- **fix**: 錯誤修復 (會升 patch 版本)
+- **perf**: 效能改進 (會升 patch 版本)
+- **refactor**: 程式碼重構 (不影響功能的程式碼改善)
+- **docs**: 文件更新 (不會升版本)
+- **style**: 程式碼格式調整,不影響功能 (不會升版本)
+- **test**: 測試相關 (不會升版本)
+- **build**: 建置系統或外部相依性變更 (不會升版本)
+- **ci**: CI/CD 設定檔變更 (不會升版本)
+- **chore**: 其他雜項變更 (不會升版本)
+- **revert**: 回復先前的 commit
+
+### 範例
+
+```bash
+# 新功能
+git commit -m "feat: 新增自動鎖定閒置超時設定"
+git commit -m "feat: 新增緊急模式快捷鍵"
+
+# 錯誤修復
+git commit -m "fix: 修復鎖定畫面閃爍問題"
+git commit -m "fix: 修復通知在鎖定狀態下仍顯示的問題"
+
+# 效能改進
+git commit -m "perf: 優化 BrowserView 渲染效能"
+
+# 重構
+git commit -m "refactor: 重構 LockManager 模組結構"
+
+# 文件更新
+git commit -m "docs: 更新 CLAUDE.md 架構說明"
+
+# Breaking Change (會升 major 版本)
+git commit -m "feat: 重新設計密碼驗證機制
+
+BREAKING CHANGE: 舊版密碼格式不相容,需要重新設定密碼"
+```
+
+### 自動驗證
+
+專案已設定 husky + commitlint:
+- 每次 commit 時會自動檢查訊息格式
+- 不符合規範的 commit 會被拒絕
+- 錯誤訊息會說明哪裡需要修正
+
+### Claude Code 執行 git commit 時
+
+當 Claude Code 為您執行 git commit 時,**必須**遵循以下規範:
+
+1. 分析變更內容,判斷適當的 type
+2. 使用繁體中文撰寫 subject
+3. Subject 簡潔扼要 (50 字以內)
+4. 格式範例:
+   ```bash
+   git commit -m "feat: 新增使用者設定面板"
+   git commit -m "fix: 修復記憶體洩漏問題"
+   git commit -m "docs: 更新安裝說明"
+   ```
+
+### 版本發布流程
+
+1. 完成一系列符合規範的 commits
+2. 執行 `npm run release` 自動:
+   - 分析所有 commits
+   - 決定版本號 (根據 feat/fix/BREAKING CHANGE)
+   - 更新 package.json 版本
+   - 生成/更新 CHANGELOG.md
+   - 建立 git tag
+3. 或使用指定版本升級:
+   - `npm run release:patch` - 錯誤修復版本
+   - `npm run release:minor` - 新功能版本
+   - `npm run release:major` - 破壞性更新版本

@@ -1,22 +1,35 @@
 {
   "name": "next-calc",
   "version": "1.0.0",
-  "description": "NEXT Calc - Advanced Calculator for macOS",
+  "description": "NextCalc - Advanced Calculator for macOS",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --mac"
+    "build": "electron-builder --mac",
+    "release": "standard-version",
+    "release:minor": "standard-version --release-as minor",
+    "release:major": "standard-version --release-as major",
+    "release:patch": "standard-version --release-as patch",
+    "prepare": "husky"
   },
-  "keywords": ["calculator", "electron", "macos"],
+  "keywords": [
+    "calculator",
+    "electron",
+    "macos"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
     "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "husky": "^9.1.7",
+    "standard-version": "^9.5.0"
   },
   "build": {
     "appId": "com.nextcalc.app",
-    "productName": "NEXT Calc",
+    "productName": "NextCalc",
     "mac": {
       "category": "public.app-category.social-networking",
       "icon": "build/icon.icns",

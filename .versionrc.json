@@ -1,0 +1,46 @@
+{
+  "types": [
+    {
+      "type": "feat",
+      "section": "✨ 新功能"
+    },
+    {
+      "type": "fix",
+      "section": "🐛 錯誤修復"
+    },
+    {
+      "type": "perf",
+      "section": "⚡ 效能改進"
+    },
+    {
+      "type": "refactor",
+      "section": "♻️ 程式碼重構"
+    },
+    {
+      "type": "docs",
+      "section": "📝 文件更新"
+    },
+    {
+      "type": "style",
+      "section": "💄 樣式調整"
+    },
+    {
+      "type": "test",
+      "section": "✅ 測試"
+    },
+    {
+      "type": "build",
+      "section": "🔨 建置系統"
+    },
+    {
+      "type": "ci",
+      "section": "👷 CI/CD"
+    },
+    {
+      "type": "chore",
+      "section": "🔧 雜項"
+    }
+  ],
+  "header": "# 更新日誌\n\n此專案的所有重要變更都會記錄在此檔案中。\n\n",
+  "releaseCommitMessageFormat": "chore(release): 發布版本 {{currentTag}}"
+}
