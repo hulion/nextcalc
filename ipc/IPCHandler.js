@@ -14,6 +14,7 @@ class IPCHandler {
     this.telegramView = null;
     this.configManager = null;
     this.idleDetector = null;
+    this.updateManager = null;
     this.isUnlocked = false;
     this.handlers = new Map();
     this.isDev = false;
@@ -26,16 +27,18 @@ class IPCHandler {
    * @param {BrowserView} options.telegramView - Telegram BrowserView 實例
    * @param {ConfigManager} options.configManager - 配置管理器實例
    * @param {IdleDetector} options.idleDetector - 閒置檢測器實例
+   * @param {UpdateManager} options.updateManager - 更新管理器實例
    * @param {Function} options.lockApp - 鎖定應用回調
    * @param {Function} options.createMenu - 創建菜單回調
    * @param {Function} options.unlockApp - 解鎖應用回調
    * @param {boolean} options.isDev - 是否為開發模式
    */
-  initialize({ mainWindow, telegramView, configManager, idleDetector, lockApp, createMenu, unlockApp, isDev }) {
+  initialize({ mainWindow, telegramView, configManager, idleDetector, updateManager, lockApp, createMenu, unlockApp, isDev }) {
     this.mainWindow = mainWindow;
     this.telegramView = telegramView;
     this.configManager = configManager;
     this.idleDetector = idleDetector;
+    this.updateManager = updateManager;
     this.lockApp = lockApp;
     this.createMenu = createMenu;
     this.unlockApp = unlockApp;
@@ -68,6 +71,9 @@ class IPCHandler {
     this.register('switch-to-english-input', this.handleSwitchToEnglishInput.bind(this));
     this.register('show-notification', this.handleShowNotification.bind(this));
     this.register('is-development', this.handleIsDevelopment.bind(this));
+
+    // === 自動更新 ===
+    this.register('install-update', this.handleInstallUpdate.bind(this));
 
     console.log('[IPCHandler] All handlers registered');
   }
@@ -274,6 +280,18 @@ class IPCHandler {
    */
   async handleIsDevelopment() {
     return this.isDev;
+  }
+
+  /**
+   * 處理安裝更新
+   */
+  async handleInstallUpdate() {
+    console.log('[IPCHandler] Install update requested');
+    if (this.updateManager) {
+      this.updateManager.installUpdate();
+      return true;
+    }
+    return false;
   }
 
   /**

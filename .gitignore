@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/Release/
+*.log
+.DS_Store
+.env
+*.dmg
+*.zip
+out/
+
+# Claude Code 相關檔案 (本地設定)
+.claude/

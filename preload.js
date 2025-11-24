@@ -41,6 +41,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   isDevelopment: () => {
     return ipcRenderer.invoke('is-development');
+  },
+  // 自動更新 API
+  installUpdate: () => {
+    return ipcRenderer.invoke('install-update');
+  },
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on('update-available', callback);
+  },
+  onUpdateProgress: (callback) => {
+    ipcRenderer.on('update-progress', callback);
+  },
+  onUpdateDownloaded: (callback) => {
+    ipcRenderer.on('update-downloaded', callback);
   }
 });
 

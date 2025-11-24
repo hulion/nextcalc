@@ -48,7 +48,8 @@ main.js                    # 入口點,協調所有模組
 │   ├── ConfigManager.js   # 密碼/設定的單例 (儲存至 ~/Library/Application Support)
 │   └── IdleDetector.js    # 基於閒置時間的自動鎖定
 ├── features/
-│   └── LockManager.js     # 核心鎖定/解鎖邏輯,協調 BrowserView 定位
+│   ├── LockManager.js     # 核心鎖定/解鎖邏輯,協調 BrowserView 定位
+│   └── UpdateManager.js   # 自動更新管理 (使用 electron-updater)
 ├── window/
 │   ├── MainWindow.js      # 計算機視窗管理
 │   └── BrowserViewManager.js  # Telegram BrowserView 生命週期
@@ -279,3 +280,90 @@ BREAKING CHANGE: 舊版密碼格式不相容,需要重新設定密碼"
    - `npm run release:patch` - 錯誤修復版本
    - `npm run release:minor` - 新功能版本
    - `npm run release:major` - 破壞性更新版本
+
+## 自動更新系統
+
+應用程式使用 `electron-updater` 實作自動更新功能,從 GitHub Releases 獲取更新。
+
+### 更新流程
+
+1. **檢查更新**: 應用程式啟動 3 秒後自動檢查更新
+2. **下載更新**: 發現新版本時自動下載
+3. **通知使用者**: 顯示更新通知卡片,包含版本號和下載進度
+4. **安裝更新**: 使用者點擊「立即重啟安裝」,應用程式重啟並套用更新
+
+### 發佈新版本到 GitHub Releases
+
+#### 步驟 1: 建立並推送版本標籤
+
+```bash
+# 1. 確保所有變更已提交
+git status
+
+# 2. 執行 release 指令建立版本標籤
+npm run release        # 或 release:patch / release:minor / release:major
+
+# 3. 推送 commits 和 tags 到 GitHub
+git push --follow-tags origin main
+```
+
+#### 步驟 2: 建置應用程式
+
+```bash
+# 建置 macOS 應用程式 (會產生 zip 和 dmg)
+npm run build
+```
+
+建置完成後,檔案位於 `dist/` 目錄:
+- `NextCalc-{version}-mac.zip` - 自動更新用
+- `NextCalc-{version}.dmg` - 使用者下載安裝用
+- `latest-mac.yml` - 更新資訊檔
+
+#### 步驟 3: 建立 GitHub Release
+
+1. 前往 https://github.com/hulion/nextcalc/releases
+2. 點擊「Draft a new release」
+3. 選擇剛剛建立的標籤 (例如 `v1.0.1`)
+4. Release title: `v1.0.1` (與標籤相同)
+5. 描述欄位:從 CHANGELOG.md 複製此版本的變更內容
+6. 上傳以下檔案:
+   - `NextCalc-{version}-mac.zip` (必須!)
+   - `NextCalc-{version}.dmg`
+   - `latest-mac.yml` (必須!)
+7. 點擊「Publish release」
+
+#### 步驟 4: 驗證自動更新
+
+發佈後,舊版本的應用程式會:
+1. 自動檢測到新版本
+2. 在背景下載更新
+3. 顯示更新通知
+4. 使用者確認後重啟並套用更新
+
+### 更新系統架構
+
+- **UpdateManager.js**: 管理更新邏輯,監聽 electron-updater 事件
+- **更新通知 UI**: 在計算機鎖定畫面顯示,符合現有設計語言
+- **IPC 通信**: 透過 `update-available`、`update-progress`、`update-downloaded` 事件傳遞更新狀態
+
+### 開發模式注意事項
+
+- 開發模式 (`npm start`) 不會檢查更新
+- 只有打包後的應用程式 (`.app`) 才會啟用自動更新
+- 測試更新功能需要建置並安裝應用程式
+
+### 疑難排解
+
+**問題**: 使用者沒有收到更新通知
+
+檢查項目:
+1. GitHub Release 是否包含 `latest-mac.yml` 和 `.zip` 檔案
+2. package.json 的 `repository` 欄位是否正確
+3. 檢查主控台是否有 `[UpdateManager]` 相關錯誤訊息
+
+**問題**: 更新下載失敗
+
+可能原因:
+1. 網路連線問題
+2. GitHub Release 檔案損壞
+3. 權限不足無法寫入暫存目錄

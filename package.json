@@ -19,6 +19,10 @@
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hulion/nextcalc.git"
+  },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.0.0",
@@ -34,14 +38,21 @@
       "category": "public.app-category.social-networking",
       "icon": "build/icon.icns",
       "target": [
-        "dmg",
-        "zip"
+        "zip",
+        "dmg"
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "hulion",
+        "repo": "nextcalc"
+      }
+    ],
     "dmg": {
       "contents": [
         {
@@ -56,5 +67,8 @@
         }
       ]
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
   }
 }

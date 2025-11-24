@@ -138,6 +138,13 @@
                 this.idleTimer = null;
                 this.animationStartTime = Date.now();
 
+                // 3D 翻轉動畫狀態
+                this.isFlipping = false;
+                this.flipProgress = 0;  // 0-1
+                this.flipDuration = 800;  // 翻轉動畫時長 (毫秒)
+                this.flipStartTime = 0;
+                this.targetMode = this.isRandomMode;  // 目標模式
+
                 this.init();
             }
 
@@ -168,22 +175,28 @@
 
             setupCanvas() {
                 const dpr = window.devicePixelRatio || 1;
-                const rect = this.canvas.getBoundingClientRect();
+                const width = window.innerWidth;
+                const height = window.innerHeight;
 
                 // 設定 Canvas 實際像素尺寸
-                this.canvas.width = rect.width * dpr;
-                this.canvas.height = rect.height * dpr;
+                this.canvas.width = width * dpr;
+                this.canvas.height = height * dpr;
 
                 // 設定 Canvas 顯示尺寸
-                this.canvas.style.width = `${rect.width}px`;
-                this.canvas.style.height = `${rect.height}px`;
+                this.canvas.style.width = `${width}px`;
+                this.canvas.style.height = `${height}px`;
+
+                // 重新獲取 context（這會重置所有轉換）
+                this.ctx = this.canvas.getContext('2d', { alpha: true });
 
                 // 縮放 context 以匹配 DPI
                 this.ctx.scale(dpr, dpr);
 
-                this.width = rect.width;
-                this.height = rect.height;
+                this.width = width;
+                this.height = height;
                 this.dpr = dpr;
+
+                console.log('[CanvasMarquee] Canvas resized:', width, 'x', height, 'DPR:', dpr);
             }
 
             getRandomOperator() {
@@ -224,6 +237,22 @@
 
                 // 更新 FPS 監控器
                 this.fpsMonitor.update();
+
+                // 更新翻轉動畫
+                if (this.isFlipping) {
+                    const elapsed = Date.now() - this.flipStartTime;
+                    this.flipProgress = Math.min(elapsed / this.flipDuration, 1);
+
+                    if (this.flipProgress >= 0.5 && this.isRandomMode !== this.targetMode) {
+                        // 翻轉到一半時切換模式
+                        this.isRandomMode = this.targetMode;
+                    }
+
+                    if (this.flipProgress >= 1) {
+                        this.isFlipping = false;
+                        this.flipProgress = 0;
+                    }
+                }
 
                 // 清空 Canvas
                 this.ctx.clearRect(0, 0, this.width, this.height);
@@ -308,7 +337,15 @@
                 // 調整透明度係數從 0.4 到 0.625,使範圍從 4%-32% 變成 4%-50%
                 this.ctx.globalAlpha = itemState.opacity * 0.625;
                 this.ctx.translate(x, y);
-                this.ctx.scale(scale, scale);
+
+                // 計算翻轉效果的 scaleX
+                let flipScaleX = 1;
+                if (this.isFlipping) {
+                    const easedProgress = this.easeInOutCubic(this.flipProgress);
+                    flipScaleX = Math.abs(1 - 2 * easedProgress);
+                }
+
+                this.ctx.scale(scale * flipScaleX, scale);
 
                 // 使用項目自己的固定符號,而不是每次都隨機生成
                 const text = this.isRandomMode ? itemState.symbol : this.bgNumber;
@@ -329,8 +366,15 @@
                 // 移動到項目位置
                 this.ctx.translate(x, y);
 
-                // 應用縮放
-                this.ctx.scale(scale, scale);
+                // 計算翻轉效果的 scaleX
+                let flipScaleX = 1;
+                if (this.isFlipping) {
+                    const easedProgress = this.easeInOutCubic(this.flipProgress);
+                    flipScaleX = Math.abs(1 - 2 * easedProgress);
+                }
+
+                // 應用縮放（包含翻轉效果）
+                this.ctx.scale(scale * flipScaleX, scale);
 
                 // 設定字體
                 this.ctx.font = `italic 800 ${this.bgFontSize}px Barlow, sans-serif`;
@@ -365,10 +409,28 @@
                 });
             }
 
+            // 緩動函數 (ease-in-out cubic)
+            easeInOutCubic(t) {
+                return t < 0.5
+                    ? 4 * t * t * t
+                    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            }
+
+            // 開始翻轉動畫
+            startFlip(targetMode) {
+                if (this.targetMode !== targetMode) {
+                    this.isFlipping = true;
+                    this.flipProgress = 0;
+                    this.flipStartTime = Date.now();
+                    this.targetMode = targetMode;
+                    console.log('[CanvasMarquee] Starting flip to', targetMode ? 'symbols' : 'numbers');
+                }
+            }
+
             // 開始自動旋轉
             startAutoRotation() {
                 if (this.autoRotateInterval) clearInterval(this.autoRotateInterval);
-                this.isRandomMode = true;
+                this.startFlip(true);  // 翻轉到符號模式
                 this.autoRotateInterval = setInterval(() => {
                     this.randomizeVisuals();
                 }, 5000);
@@ -376,7 +438,7 @@
 
             // 處理使用者互動
             handleUserInteraction() {
-                this.isRandomMode = false;
+                this.startFlip(false);  // 翻轉回數字模式
                 this.randomizeVisuals();
                 if (this.autoRotateInterval) clearInterval(this.autoRotateInterval);
                 if (this.idleTimer) clearTimeout(this.idleTimer);
@@ -1069,3 +1131,146 @@
                 closeSettingsModal();
             }
         });
+
+        // ==================== 更新通知功能 ====================
+        let currentUpdateInfo = null;
+
+        // 顯示更新通知
+        function showUpdateNotification(updateInfo) {
+            currentUpdateInfo = updateInfo;
+            const notification = document.getElementById('updateNotification');
+            const titleEl = document.querySelector('.update-title');
+            const versionEl = document.getElementById('updateVersion');
+            const progressContainer = document.getElementById('updateProgressContainer');
+            const installBtn = document.getElementById('updateInstallBtn');
+            const laterBtn = document.getElementById('updateLaterBtn');
+            const closeBtn = document.getElementById('updateCloseBtn');
+
+            // 更新版本資訊
+            versionEl.textContent = `版本 ${updateInfo.version}`;
+
+            // 隱藏進度條,啟用安裝按鈕
+            progressContainer.style.display = 'none';
+            installBtn.disabled = false;
+            installBtn.textContent = '立即重啟安裝';
+
+            // 根據更新類型控制樣式、標題和按鈕可見性
+            if (updateInfo.isMandatory) {
+                // 必須更新:全螢幕遮罩,隱藏「稍後提醒」按鈕和關閉按鈕
+                notification.classList.remove('optional');
+                if (titleEl) titleEl.textContent = '重要更新';
+                if (laterBtn) laterBtn.style.display = 'none';
+                if (closeBtn) closeBtn.style.display = 'none';
+                console.log('[Calculator] Mandatory update - fullscreen modal');
+            } else {
+                // 可選更新:左上角通知,顯示「稍後提醒」按鈕和關閉按鈕
+                notification.classList.add('optional');
+                if (titleEl) titleEl.textContent = '有可用更新';
+                if (laterBtn) laterBtn.style.display = 'block';
+                if (closeBtn) closeBtn.style.display = 'block';
+                console.log('[Calculator] Optional update - top-left notification');
+            }
+
+            // 顯示通知
+            notification.style.display = 'flex';
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+
+            console.log('[Calculator] Update notification shown:', updateInfo.version, 'isMandatory:', updateInfo.isMandatory);
+        }
+
+        // 更新下載進度
+        function updateDownloadProgress(progress) {
+            const progressContainer = document.getElementById('updateProgressContainer');
+            const progressBar = document.getElementById('updateProgressBar');
+            const progressPercent = document.getElementById('updateProgressPercent');
+            const installBtn = document.getElementById('updateInstallBtn');
+
+            // 顯示進度條
+            progressContainer.style.display = 'block';
+
+            // 更新進度
+            progressBar.style.width = `${progress.percent}%`;
+            progressPercent.textContent = `${progress.percent}%`;
+
+            // 下載期間停用安裝按鈕
+            installBtn.disabled = true;
+            installBtn.textContent = '下載中...';
+
+            console.log('[Calculator] Update download progress:', progress.percent + '%');
+        }
+
+        // 更新下載完成
+        function updateDownloadComplete(updateInfo) {
+            const progressContainer = document.getElementById('updateProgressContainer');
+            const installBtn = document.getElementById('updateInstallBtn');
+
+            // 隱藏進度條
+            progressContainer.style.display = 'none';
+
+            // 啟用安裝按鈕
+            installBtn.disabled = false;
+            installBtn.textContent = '立即重啟安裝';
+
+            console.log('[Calculator] Update download complete:', updateInfo.version);
+        }
+
+        // 關閉更新通知
+        function closeUpdateNotification() {
+            const notification = document.getElementById('updateNotification');
+            notification.classList.remove('show');
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 300);
+        }
+
+        // 安裝更新
+        async function installUpdate() {
+            if (window.electronAPI && window.electronAPI.installUpdate) {
+                // 檢查是否為開發模式
+                const isDev = await window.electronAPI.isDevelopment();
+
+                if (isDev) {
+                    // 測試模式：顯示訊息後關閉通知
+                    const installBtn = document.getElementById('updateInstallBtn');
+                    installBtn.textContent = '✓ 測試完成（不會真的重啟）';
+                    installBtn.disabled = true;
+                    installBtn.style.background = '#10b981'; // 綠色
+                    installBtn.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)'; // 綠色光暈
+
+                    // 調用主程序的測試安裝（僅記錄日誌）
+                    window.electronAPI.installUpdate();
+
+                    console.log('[Calculator] Test mode: Install button clicked, app will not restart');
+
+                    // 2秒後關閉通知，回到計算機畫面
+                    setTimeout(() => {
+                        closeUpdateNotification();
+                    }, 2000);
+                } else {
+                    // 生產模式：立即安裝並重啟
+                    window.electronAPI.installUpdate();
+                }
+            }
+        }
+
+        // 監聽來自主程序的更新事件
+        if (window.electronAPI) {
+            // 有可用更新
+            window.electronAPI.onUpdateAvailable((event, updateInfo) => {
+                console.log('[Calculator] Update available:', updateInfo);
+                showUpdateNotification(updateInfo);
+            });
+
+            // 下載進度
+            window.electronAPI.onUpdateProgress((event, progress) => {
+                updateDownloadProgress(progress);
+            });
+
+            // 下載完成
+            window.electronAPI.onUpdateDownloaded((event, updateInfo) => {
+                console.log('[Calculator] Update downloaded:', updateInfo);
+                updateDownloadComplete(updateInfo);
+            });
+        }

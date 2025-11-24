@@ -101,6 +101,9 @@ class LockManager {
         console.error('[LockManager] Failed to reset calculator:', err);
       });
 
+      // Notify calculator that app is now locked (resume animations)
+      this.mainWindow.webContents.send('lock-state-changed', true);
+
       // Rebuild menu after locking
       if (this.onMenuRebuild) {
         this.onMenuRebuild();
@@ -127,6 +130,9 @@ class LockManager {
       console.log('[LockManager] Unlocking app - showing BrowserView');
       const bounds = this.mainWindow.getContentBounds();
       this.telegramView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
+
+      // Notify calculator that app is now unlocked (stop animations)
+      this.mainWindow.webContents.send('lock-state-changed', false);
 
       // Rebuild menu after unlocking
       if (this.onMenuRebuild) {

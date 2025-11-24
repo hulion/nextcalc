@@ -9,6 +9,7 @@ class MenuBuilder {
   constructor() {
     this.mainWindow = null;
     this.lockManager = null;
+    this.updateManager = null;
     this.isTelegramLoaded = false;
     this.onOpenSettings = null;
   }
@@ -19,6 +20,7 @@ class MenuBuilder {
   setDependencies(options) {
     this.mainWindow = options.mainWindow;
     this.lockManager = options.lockManager;
+    this.updateManager = options.updateManager;
     this.onOpenSettings = options.onOpenSettings;
   }
 
@@ -44,6 +46,25 @@ class MenuBuilder {
     // Only show DevTools in development mode
     if (!app.isPackaged) {
       viewSubmenu.push({ role: 'toggleDevTools' });
+      viewSubmenu.push({ type: 'separator' });
+      viewSubmenu.push({
+        label: 'Test Mandatory Update',
+        click: () => {
+          console.log('[MenuBuilder] Test mandatory update flow triggered');
+          if (this.updateManager) {
+            this.updateManager.testUpdateFlow(true);
+          }
+        }
+      });
+      viewSubmenu.push({
+        label: 'Test Optional Update',
+        click: () => {
+          console.log('[MenuBuilder] Test optional update flow triggered');
+          if (this.updateManager) {
+            this.updateManager.testUpdateFlow(false);
+          }
+        }
+      });
     }
 
     viewSubmenu.push({ type: 'separator' });

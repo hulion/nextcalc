@@ -131,6 +131,45 @@
         </div>
     </div>
 
+    <!-- 更新通知卡片 -->
+    <div class="update-notification" id="updateNotification">
+        <div class="update-card">
+            <!-- Header -->
+            <div class="update-header">
+                <div class="update-icon-wrapper">
+                    <svg class="update-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path>
+                    </svg>
+                </div>
+                <div class="update-title-group">
+                    <h2 class="update-title">有可用更新</h2>
+                    <p class="update-version" id="updateVersion">版本 1.0.0</p>
+                </div>
+                <button class="update-close-btn" id="updateCloseBtn" onclick="closeUpdateNotification()">×</button>
+            </div>
+
+            <!-- Progress -->
+            <div class="update-progress-container" id="updateProgressContainer" style="display: none;">
+                <div class="update-progress-info">
+                    <span class="update-progress-label">下載中...</span>
+                    <span class="update-progress-percent" id="updateProgressPercent">0%</span>
+                </div>
+                <div class="update-progress-bar-bg">
+                    <div class="update-progress-bar" id="updateProgressBar"></div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="update-button-group">
+                <button class="update-later-btn" id="updateLaterBtn" onclick="closeUpdateNotification()">稍後提醒</button>
+                <button class="update-install-btn" id="updateInstallBtn" onclick="installUpdate()">立即重啟安裝</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 密碼設定彈窗 -->
     <div class="settings-modal" id="settingsModal">
         <div class="settings-overlay-inner">

@@ -8,6 +8,7 @@ const { getInstance: getConfigManager } = require('./config/ConfigManager');
 const IdleDetector = require('./config/IdleDetector');
 const IPCHandler = require('./ipc/IPCHandler');
 const LockManager = require('./features/LockManager');
+const UpdateManager = require('./features/UpdateManager');
 const MainWindow = require('./window/MainWindow');
 const BrowserViewManager = require('./window/BrowserViewManager');
 const MenuBuilder = require('./menu/MenuBuilder');
@@ -17,6 +18,7 @@ const configManager = getConfigManager();
 const idleDetector = new IdleDetector(configManager);
 const ipcHandler = new IPCHandler();
 const lockManager = new LockManager();
+const updateManager = new UpdateManager();
 const mainWindowManager = new MainWindow();
 const browserViewManager = new BrowserViewManager();
 const menuBuilder = new MenuBuilder();
@@ -68,9 +70,16 @@ function createApp() {
   menuBuilder.setDependencies({
     mainWindow,
     lockManager,
+    updateManager,
     onOpenSettings: () => {
       mainWindowManager.openPasswordSettings();
     }
+  });
+
+  // Initialize UpdateManager
+  updateManager.initialize({
+    mainWindow,
+    isDevelopment: isDev
   });
 
   // Initialize IPC handlers
@@ -79,6 +88,7 @@ function createApp() {
     telegramView,
     configManager,
     idleDetector,
+    updateManager,
     lockApp: () => lockManager.lockApp(),
     unlockApp: () => lockManager.unlockApp(),
     createMenu: () => menuBuilder.build(),
@@ -112,6 +122,11 @@ app.on('ready', async () => {
   } else {
     console.log('[Main] Cmd+Escape global shortcut registration failed');
   }
+
+  // Check for updates after app is ready (delay 3 seconds)
+  setTimeout(() => {
+    updateManager.checkForUpdates();
+  }, 3000);
 });
 
 /**
