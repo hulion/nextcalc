@@ -8,16 +8,394 @@
         let passwordInput = '';
         let PASSWORD = '1209';
 
-        // === 背景跑馬燈狀態變量 ===
-        let bgNumber = '0';           // 背景顯示的數字
-        let bgAngle = 34;             // 背景旋轉角度
-        let bgGap = 60;               // 數字間距
-        let bgRowGap = 0;             // 行與行之間的垂直間距
-        let bgFontSize = 100;         // 字體大小
-        let animationIntervalRef = null;    // 數字動畫計時器
-        let autoRotateIntervalRef = null;   // 自動旋轉計時器
-        let idleTimerRef = null;             // 閒置計時器
-        let isRandomMode = false;            // 隨機符號模式標記
+        // === FPS 檢測器類別 ===
+        class FPSMonitor {
+            constructor() {
+                this.fps = 0;
+                this.frameCount = 0;
+                this.lastTime = performance.now();
+                this.fpsHistory = [];
+                this.maxHistoryLength = 60; // 保留最近 60 個 FPS 記錄
+            }
+
+            update() {
+                this.frameCount++;
+                const currentTime = performance.now();
+                const elapsed = currentTime - this.lastTime;
+
+                // 每秒更新一次 FPS
+                if (elapsed >= 1000) {
+                    this.fps = Math.round((this.frameCount * 1000) / elapsed);
+                    this.fpsHistory.push(this.fps);
+
+                    // 限制歷史記錄長度
+                    if (this.fpsHistory.length > this.maxHistoryLength) {
+                        this.fpsHistory.shift();
+                    }
+
+                    this.frameCount = 0;
+                    this.lastTime = currentTime;
+
+                    // 更新 DOM 顯示
+                    this.updateDisplay();
+                }
+            }
+
+            updateDisplay() {
+                const fpsElement = document.getElementById('fpsCounter');
+                if (fpsElement) {
+                    const avgFps = this.getAverageFPS();
+                    const minFps = this.getMinFPS();
+                    const maxFps = this.getMaxFPS();
+
+                    fpsElement.innerHTML = `
+                        <div class="fps-current">${this.fps}</div>
+                        <div class="fps-label">FPS</div>
+                        <div class="fps-stats">
+                            <span>AVG: ${avgFps}</span>
+                            <span>MIN: ${minFps}</span>
+                            <span>MAX: ${maxFps}</span>
+                        </div>
+                    `;
+
+                    // 根據 FPS 變更顏色
+                    if (this.fps >= 50) {
+                        fpsElement.className = 'fps-counter fps-good';
+                    } else if (this.fps >= 30) {
+                        fpsElement.className = 'fps-counter fps-ok';
+                    } else {
+                        fpsElement.className = 'fps-counter fps-bad';
+                    }
+                }
+            }
+
+            getAverageFPS() {
+                if (this.fpsHistory.length === 0) return 0;
+                const sum = this.fpsHistory.reduce((a, b) => a + b, 0);
+                return Math.round(sum / this.fpsHistory.length);
+            }
+
+            getMinFPS() {
+                if (this.fpsHistory.length === 0) return 0;
+                return Math.min(...this.fpsHistory);
+            }
+
+            getMaxFPS() {
+                if (this.fpsHistory.length === 0) return 0;
+                return Math.max(...this.fpsHistory);
+            }
+
+            reset() {
+                this.fps = 0;
+                this.frameCount = 0;
+                this.fpsHistory = [];
+                this.lastTime = performance.now();
+            }
+        }
+
+        // === Canvas 背景跑馬燈類別 ===
+        class CanvasMarquee {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                if (!this.canvas) {
+                    console.error('[CanvasMarquee] Canvas element not found:', canvasId);
+                    return;
+                }
+
+                this.ctx = this.canvas.getContext('2d', { alpha: true });
+                this.animationFrameId = null;
+                this.isRunning = false;
+
+                // 新增 FPS 監控器
+                this.fpsMonitor = new FPSMonitor();
+
+                // 背景跑馬燈狀態
+                this.bgNumber = '0';
+                this.bgAngle = 34;
+                this.bgGap = 60;
+                this.bgRowGap = 0;
+                this.bgFontSize = 100;
+                this.isRandomMode = false;
+
+                // 運算符號
+                this.operators = ['+', '-', '×', '÷'];
+
+                // 行設定：10 行保持效能
+                this.rowSettings = Array.from({ length: 10 }).map((_, i) => ({
+                    id: i,
+                    speed: 40 + Math.random() * 40,  // 40-80秒 (像素/秒)
+                    direction: i % 2 === 0 ? 'left' : 'right',
+                    offset: 0,  // 當前偏移量
+                    fontSize: Math.floor(Math.random() * (200 - 20 + 1)) + 20  // 每列隨機字體大小 20-200px
+                }));
+
+                // 每行的數字項配置 - 20 個 (10×20=200個符號)
+                this.itemsPerRow = 20;
+                this.itemStates = [];  // 存儲每個項的動畫狀態
+
+                // 計時器
+                this.autoRotateInterval = null;
+                this.idleTimer = null;
+                this.animationStartTime = Date.now();
+
+                this.init();
+            }
+
+            init() {
+                // 設定高 DPI 螢幕支援
+                this.setupCanvas();
+
+                // 初始化每個項的動畫狀態
+                for (let row = 0; row < this.rowSettings.length; row++) {
+                    this.itemStates[row] = [];
+                    for (let item = 0; item < this.itemsPerRow; item++) {
+                        this.itemStates[row][item] = {
+                            opacity: 0.1 + Math.random() * 0.7,
+                            scale: 0.1,
+                            scaleSpeed: 3 + Math.random() * 4,  // 3-7秒週期
+                            scalePhase: Math.random() * Math.PI * 2,  // 隨機起始相位
+                            blur: 1 + Math.random() * 4,
+                            symbol: this.getRandomOperator()  // 每個項目有自己固定的符號
+                        };
+                    }
+                }
+
+                // 監聽視窗大小變化
+                window.addEventListener('resize', () => this.setupCanvas());
+
+                console.log('[CanvasMarquee] Initialized');
+            }
+
+            setupCanvas() {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = this.canvas.getBoundingClientRect();
+
+                // 設定 Canvas 實際像素尺寸
+                this.canvas.width = rect.width * dpr;
+                this.canvas.height = rect.height * dpr;
+
+                // 設定 Canvas 顯示尺寸
+                this.canvas.style.width = `${rect.width}px`;
+                this.canvas.style.height = `${rect.height}px`;
+
+                // 縮放 context 以匹配 DPI
+                this.ctx.scale(dpr, dpr);
+
+                this.width = rect.width;
+                this.height = rect.height;
+                this.dpr = dpr;
+            }
+
+            getRandomOperator() {
+                return this.operators[Math.floor(Math.random() * this.operators.length)];
+            }
+
+            start() {
+                if (this.isRunning) return;
+                this.isRunning = true;
+                this.animationStartTime = Date.now();
+                this.startAutoRotation();
+                this.animate();
+                console.log('[CanvasMarquee] Started');
+            }
+
+            stop() {
+                this.isRunning = false;
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+                if (this.autoRotateInterval) {
+                    clearInterval(this.autoRotateInterval);
+                    this.autoRotateInterval = null;
+                }
+                if (this.idleTimer) {
+                    clearTimeout(this.idleTimer);
+                    this.idleTimer = null;
+                }
+
+                // 清空 Canvas
+                this.ctx.clearRect(0, 0, this.width, this.height);
+                console.log('[CanvasMarquee] Stopped');
+            }
+
+            animate() {
+                if (!this.isRunning) return;
+
+                // 更新 FPS 監控器
+                this.fpsMonitor.update();
+
+                // 清空 Canvas
+                this.ctx.clearRect(0, 0, this.width, this.height);
+
+                // 儲存當前狀態
+                this.ctx.save();
+
+                // 計算旋轉中心(視窗中心)
+                const centerX = this.width / 2;
+                const centerY = this.height / 2;
+
+                // 移動到中心並旋轉
+                this.ctx.translate(centerX, centerY);
+                this.ctx.rotate((this.bgAngle * Math.PI) / 180);
+                this.ctx.translate(-centerX, -centerY);
+
+                // 計算當前時間(秒)
+                const currentTime = (Date.now() - this.animationStartTime) / 1000;
+
+                // 繪製每一行
+                this.drawRows(currentTime);
+
+                // 恢復狀態
+                this.ctx.restore();
+
+                // 請求下一幀
+                this.animationFrameId = requestAnimationFrame(() => this.animate());
+            }
+
+            drawRows(currentTime) {
+                const rowHeight = this.height / this.rowSettings.length;
+
+                // 設定通用樣式
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillStyle = isDarkMode ? 'hsl(220, 52%, 19%)' : '#cbd5e1';
+
+                this.rowSettings.forEach((row, rowIndex) => {
+                    const y = rowIndex * rowHeight + rowHeight / 2;
+
+                    // 為每一列設定不同的字體大小
+                    this.ctx.font = `italic 800 ${row.fontSize}px Barlow, sans-serif`;
+
+                    // 計算此行的偏移量(根據時間和速度)
+                    const speedPxPerSec = this.width / row.speed;  // 像素/秒
+                    row.offset = (currentTime * speedPxPerSec) % this.width;
+
+                    if (row.direction === 'right') {
+                        row.offset = -row.offset;
+                    }
+
+                    // 計算需要的項目數量以填滿螢幕 (使用該列的字體大小)
+                    const itemWidth = row.fontSize + this.bgGap;
+                    const itemsToDraw = Math.ceil(this.width * 2 / itemWidth);  // 減少繪製範圍
+
+                    // 繪製此行的所有項目
+                    for (let i = 0; i < itemsToDraw; i++) {
+                        const itemIndex = i % this.itemsPerRow;
+                        const itemState = this.itemStates[rowIndex][itemIndex];
+
+                        // 計算 x 位置
+                        let x = row.offset + (i * itemWidth) - this.width;
+
+                        // 只繪製在可見範圍內的項目 (使用該列的字體大小)
+                        if (x < -row.fontSize * 2 || x > this.width + row.fontSize * 2) {
+                            continue;
+                        }
+
+                        // 計算縮放值(使用 sin 波動) - 簡化計算
+                        const scalePhase = itemState.scalePhase + (currentTime / itemState.scaleSpeed) * Math.PI * 2;
+                        const scale = 0.5 + (Math.sin(scalePhase) * 0.5 + 0.5) * 1.0;  // 0.5 到 1.5 (減少縮放範圍)
+
+                        this.drawItemOptimized(x, y, itemState, scale);
+                    }
+                });
+            }
+
+            // 優化的繪製方法 - 減少 save/restore 呼叫
+            drawItemOptimized(x, y, itemState, scale) {
+                this.ctx.save();
+
+                // 調整透明度係數從 0.4 到 0.625,使範圍從 4%-32% 變成 4%-50%
+                this.ctx.globalAlpha = itemState.opacity * 0.625;
+                this.ctx.translate(x, y);
+                this.ctx.scale(scale, scale);
+
+                // 使用項目自己的固定符號,而不是每次都隨機生成
+                const text = this.isRandomMode ? itemState.symbol : this.bgNumber;
+                this.ctx.fillText(text, 0, 0);
+
+                this.ctx.restore();
+            }
+
+            drawItem(x, y, itemState, scale) {
+                this.ctx.save();
+
+                // 設定透明度
+                this.ctx.globalAlpha = itemState.opacity * 0.5; // 降低透明度減少視覺負擔
+
+                // **移除 blur filter - 這是最大的效能殺手**
+                // this.ctx.filter = `blur(${itemState.blur}px)`;
+
+                // 移動到項目位置
+                this.ctx.translate(x, y);
+
+                // 應用縮放
+                this.ctx.scale(scale, scale);
+
+                // 設定字體
+                this.ctx.font = `italic 800 ${this.bgFontSize}px Barlow, sans-serif`;
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+
+                // 設定顏色(根據主題)
+                this.ctx.fillStyle = isDarkMode ? 'hsl(220, 52%, 19%)' : '#cbd5e1';
+
+                // 繪製文字
+                const text = this.isRandomMode ? this.getRandomOperator() : this.bgNumber;
+                this.ctx.fillText(text, 0, 0);
+
+                this.ctx.restore();
+            }
+
+            // 更新顯示的數字
+            updateNumber(number) {
+                this.bgNumber = number.toString();
+            }
+
+            // 隨機化視覺參數
+            randomizeVisuals() {
+                this.bgAngle = Math.floor(Math.random() * 360);
+                this.bgGap = Math.floor(Math.random() * (200 - 20 + 1)) + 20;
+                this.bgRowGap = Math.floor(Math.random() * 101);
+                this.bgFontSize = Math.floor(Math.random() * (200 - 20 + 1)) + 20;
+
+                // 為每一列隨機分配新的字體大小
+                this.rowSettings.forEach(row => {
+                    row.fontSize = Math.floor(Math.random() * (200 - 20 + 1)) + 20;
+                });
+            }
+
+            // 開始自動旋轉
+            startAutoRotation() {
+                if (this.autoRotateInterval) clearInterval(this.autoRotateInterval);
+                this.isRandomMode = true;
+                this.autoRotateInterval = setInterval(() => {
+                    this.randomizeVisuals();
+                }, 5000);
+            }
+
+            // 處理使用者互動
+            handleUserInteraction() {
+                this.isRandomMode = false;
+                this.randomizeVisuals();
+                if (this.autoRotateInterval) clearInterval(this.autoRotateInterval);
+                if (this.idleTimer) clearTimeout(this.idleTimer);
+                this.idleTimer = setTimeout(() => {
+                    this.startAutoRotation();
+                }, 5000);  // 5秒後切換到加減乘除符號
+            }
+        }
+
+        // === 背景跑馬燈狀態變量 (保留以相容舊程式碼) ===
+        let bgNumber = '0';
+        let bgAngle = 34;
+        let bgGap = 60;
+        let bgRowGap = 0;
+        let bgFontSize = 100;
+        let animationIntervalRef = null;
+        let autoRotateIntervalRef = null;
+        let idleTimerRef = null;
+        let isRandomMode = false;
 
         // 運算符號陣列
         const operators = ['+', '-', '×', '÷'];
@@ -30,9 +408,12 @@
         // 行設定：10行，每行隨機速度和方向
         const rowSettings = Array.from({ length: 10 }).map((_, i) => ({
             id: i,
-            speed: 40 + Math.random() * 40,  // 40-80秒
+            speed: 40 + Math.random() * 40,
             direction: i % 2 === 0 ? 'left' : 'right'
         }));
+
+        // 建立 CanvasMarquee 實例
+        let canvasMarquee = null;
 
         // DOM 元素
         const display = document.getElementById('display');
@@ -75,170 +456,23 @@
             }, duration);
         }
 
-        // === 背景跑馬燈核心函數 ===
-
-        // 創建跑馬燈行
-        function createMarqueeRows() {
-            const bgLayer = document.getElementById('bgLayer');
-            bgLayer.innerHTML = '';  // 清空
-
-            rowSettings.forEach(row => {
-                const rowDiv = document.createElement('div');
-                rowDiv.className = 'marquee-row';
-                rowDiv.dataset.rowId = row.id;
-                rowDiv.style.animation = `marquee-${row.direction} ${row.speed}s linear infinite`;
-
-                // 生成12個數字項（加上重複以確保無縫）
-                for (let i = 0; i < 24; i++) {
-                    const span = document.createElement('span');
-                    span.className = 'marquee-item';
-                    span.textContent = bgNumber;
-                    span.style.fontSize = `${bgFontSize}px`;
-                    span.style.opacity = 0.1 + Math.random() * 0.7;  // 每個數字獨立透明度 0.1-0.8
-                    span.style.animation = `pulse-scale ${3 + Math.random() * 4}s ease-in-out infinite alternate`;
-                    span.style.animationDelay = `${Math.random() * 5}s`;
-                    // 隨機模糊效果 1px 到 5px
-                    const randomBlur = 1 + Math.random() * 4;
-                    span.style.filter = `blur(${randomBlur}px)`;
-                    span.style.webkitFilter = `blur(${randomBlur}px)`;
-                    rowDiv.appendChild(span);
-                }
-
-                bgLayer.appendChild(rowDiv);
-            });
-        }
-
-        // 更新跑馬燈內容（更新數字和樣式）
-        function updateMarqueeContent(number, useRandomMode = false) {
-            const rows = document.querySelectorAll('.marquee-row');
-            rows.forEach(row => {
-                const spans = row.querySelectorAll('.marquee-item');
-                spans.forEach(span => {
-                    if (useRandomMode) {
-                        span.textContent = getRandomOperator();
-                    } else {
-                        span.textContent = number;
-                    }
-                    span.style.fontSize = `${bgFontSize}px`;
-                    row.style.gap = `${bgGap}px`;
-                });
-            });
-
-            // 應用垂直間距到 #bgLayer
-            const bgLayer = document.getElementById('bgLayer');
-            bgLayer.style.gap = `${bgRowGap}px`;
-        }
-
-        // 核心函數：觸發背景變化
-        function triggerBgChange(targetVal) {
-            // 清除之前的動畫計時器
-            if (animationIntervalRef) {
-                clearInterval(animationIntervalRef);
-                animationIntervalRef = null;
-            }
-
-            const targetStr = targetVal.toString();
-            const targetNum = parseInt(targetStr);
-            const startNum = parseInt(bgNumber);
-
-            // 判斷是否需要漸變動畫
-            const isSymbol = isNaN(targetNum);
-            const isLongString = targetStr.length > 1;
-            const isResetJump = Math.abs(startNum) >= 10 && targetNum === 0;
-            const isBigToSmallJump = Math.abs(startNum) >= 10 && Math.abs(targetNum) < 10;
-
-            // 直接設置（符號、長字串、或大數到小數的跳轉）
-            if (isSymbol || isLongString || isNaN(startNum) || targetNum === startNum || isResetJump || isBigToSmallJump) {
-                bgNumber = targetStr;
-                isRandomMode = false;  // 重置為正常模式
-                updateMarqueeContent(bgNumber, isRandomMode);
-                return;
-            }
-
-            // 漸變動畫
-            let current = startNum;
-            const step = targetNum > startNum ? 1 : -1;
-
-            animationIntervalRef = setInterval(() => {
-                current += step;
-                bgNumber = current.toString();
-                updateMarqueeContent(bgNumber);
-
-                if (current === targetNum) {
-                    clearInterval(animationIntervalRef);
-                    animationIntervalRef = null;
-                }
-            }, 60);
-        }
-
-        // 隨機化視覺參數並設置旋轉中心
-        function randomizeVisuals() {
-            const bgLayer = document.getElementById('bgLayer');
-            const calculator = document.querySelector('.calculator');
-
-            // 計算 calculator 元素的中心位置（相對於視口）
-            if (calculator) {
-                const calcRect = calculator.getBoundingClientRect();
-                const calcCenterX = calcRect.left + calcRect.width / 2;
-                const calcCenterY = calcRect.top + calcRect.height / 2;
-
-                // bgLayer 的左上角在 (-100vw, -100vh) 處
-                // 將視口坐標轉換為相對於 bgLayer 的坐標
-                const bgLayerOriginX = calcCenterX + window.innerWidth;
-                const bgLayerOriginY = calcCenterY + window.innerHeight;
-
-                // 設置 transform-origin（像素值）
-                bgLayer.style.transformOrigin = `${bgLayerOriginX}px ${bgLayerOriginY}px`;
-            }
-
-            const randomAngle = Math.floor(Math.random() * 360);
-            bgAngle = randomAngle;
-            bgLayer.style.transform = `rotate(${bgAngle}deg)`;
-
-            const randomGap = Math.floor(Math.random() * (200 - 20 + 1)) + 20;
-            bgGap = randomGap;
-
-            const randomRowGap = Math.floor(Math.random() * 101);
-            bgRowGap = randomRowGap;
-
-            const randomSize = Math.floor(Math.random() * (200 - 20 + 1)) + 20;
-            bgFontSize = randomSize;
-
-            updateMarqueeContent(bgNumber, isRandomMode);
-        }
-
-        // 開始自動旋轉
-        function startAutoRotation() {
-            if (autoRotateIntervalRef) clearInterval(autoRotateIntervalRef);
-            isRandomMode = true;  // 進入隨機符號模式
-            autoRotateIntervalRef = setInterval(() => {
-                randomizeVisuals();
-            }, 5000);
-        }
-
-        // 處理用戶互動
-        function handleUserInteraction() {
-            isRandomMode = false;  // 恢復正常模式
-            randomizeVisuals();
-            if (autoRotateIntervalRef) clearInterval(autoRotateIntervalRef);
-            if (idleTimerRef) clearTimeout(idleTimerRef);
-            idleTimerRef = setTimeout(() => {
-                startAutoRotation();
-            }, 2000);
-        }
+        // === Canvas 背景跑馬燈整合函數 ===
 
         // 監聽 display 元素的變化並自動更新背景數字
         let lastDisplayValue = '0';
         function startDisplayObserver() {
             const displayEl = document.getElementById('display');
-            if (!displayEl) return;
+            if (!displayEl || !canvasMarquee) return;
 
             const observer = new MutationObserver(() => {
                 const currentValue = displayEl.textContent.replace(/,/g, ''); // 移除千分位
                 if (currentValue !== lastDisplayValue) {
                     lastDisplayValue = currentValue;
-                    triggerBgChange(currentValue);
-                    handleUserInteraction();
+                    // 更新 Canvas 顯示的數字
+                    if (canvasMarquee) {
+                        canvasMarquee.updateNumber(currentValue);
+                        canvasMarquee.handleUserInteraction();
+                    }
                 }
             });
 
@@ -248,7 +482,7 @@
                 subtree: true
             });
 
-            console.log('[Calculator] Display observer started');
+            console.log('[Calculator] Display observer started (Canvas mode)');
         }
 
         // 載入密碼
@@ -490,6 +724,28 @@
             console.log('[Calculator] State reset');
         };
 
+        // Global function to stop background animations (Canvas version)
+        window.stopBackgroundAnimations = function() {
+            console.log('[Calculator] Stopping background animations (Canvas)...');
+
+            if (canvasMarquee) {
+                canvasMarquee.stop();
+            }
+
+            console.log('[Calculator] Background animations stopped');
+        };
+
+        // Global function to resume background animations (Canvas version)
+        window.resumeBackgroundAnimations = function() {
+            console.log('[Calculator] Resuming background animations (Canvas)...');
+
+            if (canvasMarquee) {
+                canvasMarquee.start();
+            }
+
+            console.log('[Calculator] Background animations resumed');
+        };
+
         // 键盘按键到按钮元素的映射表
         const keyToButtonMap = {
             '0': () => document.querySelector('button[onclick*="handleNumber(\'0\')"]'),
@@ -568,11 +824,29 @@
         // 初始化
         updateDisplay();
 
-        // === 初始化背景跑馬燈 ===
-        createMarqueeRows();
-        startAutoRotation();
+        // === 初始化 Canvas 背景跑馬燈 ===
+        canvasMarquee = new CanvasMarquee('bgCanvas');
+        canvasMarquee.start();
         startDisplayObserver();
-        console.log('[Calculator] Background marquee initialized');
+        console.log('[Calculator] Canvas background marquee initialized');
+
+        // === 初始化 FPS 檢測器顯示設定 ===
+        (async () => {
+            try {
+                const isDev = await window.electronAPI.isDevelopment();
+                const fpsCounter = document.getElementById('fpsCounter');
+
+                if (!isDev && fpsCounter) {
+                    // 生產環境:隱藏 FPS 檢測器
+                    fpsCounter.style.display = 'none';
+                    console.log('[Calculator] FPS counter hidden (production mode)');
+                } else {
+                    console.log('[Calculator] FPS counter visible (development mode)');
+                }
+            } catch (err) {
+                console.error('[Calculator] Failed to check development mode:', err);
+            }
+        })();
 
         // 注意：自動切換輸入法功能已暫時移除
         // 用戶可以直接使用鍵盤數字鍵輸入密碼
@@ -581,6 +855,18 @@
         // 監聽來自 main process 的開啟設定彈窗指令
         window.electronAPI.onOpenSettings(() => {
             openSettingsModal();
+        });
+
+        // 監聽來自 main process 的鎖定狀態變化
+        window.electronAPI.onLockStateChanged((event, isLocked) => {
+            console.log('[Calculator] Lock state changed:', isLocked ? 'Locked' : 'Unlocked');
+            if (isLocked) {
+                // 鎖定時恢復背景動畫
+                window.resumeBackgroundAnimations();
+            } else {
+                // 解鎖時停止背景動畫
+                window.stopBackgroundAnimations();
+            }
         });
 
         function openSettingsModal() {

@@ -16,6 +16,7 @@ class IPCHandler {
     this.idleDetector = null;
     this.isUnlocked = false;
     this.handlers = new Map();
+    this.isDev = false;
   }
 
   /**
@@ -28,8 +29,9 @@ class IPCHandler {
    * @param {Function} options.lockApp - 鎖定應用回調
    * @param {Function} options.createMenu - 創建菜單回調
    * @param {Function} options.unlockApp - 解鎖應用回調
+   * @param {boolean} options.isDev - 是否為開發模式
    */
-  initialize({ mainWindow, telegramView, configManager, idleDetector, lockApp, createMenu, unlockApp }) {
+  initialize({ mainWindow, telegramView, configManager, idleDetector, lockApp, createMenu, unlockApp, isDev }) {
     this.mainWindow = mainWindow;
     this.telegramView = telegramView;
     this.configManager = configManager;
@@ -37,6 +39,7 @@ class IPCHandler {
     this.lockApp = lockApp;
     this.createMenu = createMenu;
     this.unlockApp = unlockApp;
+    this.isDev = isDev || false;
 
     this.registerHandlers();
   }
@@ -64,6 +67,7 @@ class IPCHandler {
     // === 系統功能 ===
     this.register('switch-to-english-input', this.handleSwitchToEnglishInput.bind(this));
     this.register('show-notification', this.handleShowNotification.bind(this));
+    this.register('is-development', this.handleIsDevelopment.bind(this));
 
     console.log('[IPCHandler] All handlers registered');
   }
@@ -263,6 +267,13 @@ class IPCHandler {
       console.error('[IPCHandler] Failed to show notification:', err);
       return false;
     }
+  }
+
+  /**
+   * 處理檢查是否為開發模式
+   */
+  async handleIsDevelopment() {
+    return this.isDev;
   }
 
   /**

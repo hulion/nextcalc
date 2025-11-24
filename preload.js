@@ -27,6 +27,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onOpenSettings: (callback) => {
     ipcRenderer.on('open-settings', callback);
   },
+  onLockStateChanged: (callback) => {
+    ipcRenderer.on('lock-state-changed', callback);
+  },
   getIdleTime: () => {
     return ipcRenderer.invoke('get-idle-time');
   },
@@ -35,6 +38,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   switchToEnglishInput: () => {
     return ipcRenderer.invoke('switch-to-english-input');
+  },
+  isDevelopment: () => {
+    return ipcRenderer.invoke('is-development');
   }
 });
 

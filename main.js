@@ -81,7 +81,8 @@ function createApp() {
     idleDetector,
     lockApp: () => lockManager.lockApp(),
     unlockApp: () => lockManager.unlockApp(),
-    createMenu: () => menuBuilder.build()
+    createMenu: () => menuBuilder.build(),
+    isDev
   });
 
   // Build initial menu

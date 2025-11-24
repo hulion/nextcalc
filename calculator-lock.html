@@ -11,8 +11,11 @@
     <link rel="stylesheet" href="calculator-lock.css">
 </head>
 <body class="dark">
-    <!-- 動態背景跑馬燈層 -->
-    <div id="bgLayer"></div>
+    <!-- Canvas 背景跑馬燈層 -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- FPS 檢測器 (開發模式顯示) -->
+    <div id="fpsCounter" class="fps-counter"></div>
 
     <div class="calculator">
         <!-- 玻璃材質層 -->
