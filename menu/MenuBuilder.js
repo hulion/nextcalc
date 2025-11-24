@@ -95,16 +95,19 @@ class MenuBuilder {
         });
       }
 
-      viewSubmenu.push({
-        label: 'Test Notifications',
-        click: () => {
-          if (this.mainWindow) {
-            this.mainWindow.loadFile('test-notification.html').then(() => {
-              this.build(); // Rebuild menu after switching
-            });
+      // Test Notifications - only in development mode
+      if (!app.isPackaged) {
+        viewSubmenu.push({
+          label: 'Test Notifications',
+          click: () => {
+            if (this.mainWindow) {
+              this.mainWindow.loadFile('test-notification.html').then(() => {
+                this.build(); // Rebuild menu after switching
+              });
+            }
           }
-        }
-      });
+        });
+      }
     }
 
     // Add standard view items
