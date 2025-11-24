@@ -8,6 +8,36 @@
 
 無論是新對話開始、對話壓縮後,或是任何情況下,都必須使用繁體中文回應使用者。這是強制性的語言要求。
 
+## Claude Code 快速參考
+
+### 常用快捷指令
+
+當使用者說「**更新版本號**」時，執行以下完整流程：
+
+1. **執行版本發布**
+   ```bash
+   npm run release
+   ```
+   這會自動：
+   - 分析所有未發布的 commits
+   - 根據 commit type 決定版本號（feat → minor, fix → patch）
+   - 更新 package.json 版本
+   - 生成/更新 CHANGELOG.md
+   - 建立 git tag
+
+2. **推送到 GitHub**
+   ```bash
+   git push --follow-tags origin main
+   ```
+   推送 commits 和新建立的 version tag
+
+3. **確認結果**
+   - 告知使用者新版本號
+   - 提供 GitHub commit 連結
+   - 說明下一步（如需要可建置並發布到 GitHub Releases）
+
+**重要**: 使用者說「更新版本號」就是要執行上述完整流程，不需要再次確認。
+
 ## 專案概述
 
 一個偽裝成計算機的隱私導向 Telegram macOS 桌面應用程式。使用 Electron BrowserView 架構提供密碼保護存取和緊急資料清除功能。
