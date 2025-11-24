@@ -26,6 +26,7 @@ class MainWindow {
       height: 800,
       minWidth: 800,
       minHeight: 600,
+      title: 'NEXT Calc',
       titleBarStyle: 'default',
       resizable: true,
       icon: path.join(__dirname, '..', 'build', 'icon.icns'),

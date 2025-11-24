@@ -77,6 +77,10 @@ class LockManager {
       const bounds = this.mainWindow.getContentBounds();
       this.telegramView.setBounds({ x: 0, y: -10000, width: bounds.width, height: bounds.height });
 
+      // Update window title
+      this.mainWindow.setTitle('NEXT Calc');
+      console.log('[LockManager] Window title updated to: NEXT Calc');
+
       // Reset calculator state and reload password when locking
       this.mainWindow.webContents.executeJavaScript(`
         (async function() {
@@ -130,6 +134,10 @@ class LockManager {
       console.log('[LockManager] Unlocking app - showing BrowserView');
       const bounds = this.mainWindow.getContentBounds();
       this.telegramView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
+
+      // Update window title
+      this.mainWindow.setTitle('NEXT Telegram');
+      console.log('[LockManager] Window title updated to: NEXT Telegram');
 
       // Notify calculator that app is now unlocked (stop animations)
       this.mainWindow.webContents.send('lock-state-changed', false);

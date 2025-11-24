@@ -138,6 +138,16 @@ class BrowserViewManager {
   }
 
   /**
+   * 打開 BrowserView 開發者工具
+   */
+  openDevTools() {
+    if (this.telegramView && this.telegramView.webContents) {
+      this.telegramView.webContents.openDevTools({ mode: 'detach' });
+      console.log('[BrowserViewManager] DevTools opened for BrowserView');
+    }
+  }
+
+  /**
    * 調整 BrowserView 大小（用於視窗 resize 時）
    */
   resize(isUnlocked) {

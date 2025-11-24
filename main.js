@@ -69,6 +69,7 @@ function createApp() {
 
   menuBuilder.setDependencies({
     mainWindow,
+    telegramView,
     lockManager,
     updateManager,
     onOpenSettings: () => {
@@ -89,6 +90,7 @@ function createApp() {
     configManager,
     idleDetector,
     updateManager,
+    lockManager,
     lockApp: () => lockManager.lockApp(),
     unlockApp: () => lockManager.unlockApp(),
     createMenu: () => menuBuilder.build(),

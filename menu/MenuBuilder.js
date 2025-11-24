@@ -19,6 +19,7 @@ class MenuBuilder {
    */
   setDependencies(options) {
     this.mainWindow = options.mainWindow;
+    this.telegramView = options.telegramView;
     this.lockManager = options.lockManager;
     this.updateManager = options.updateManager;
     this.onOpenSettings = options.onOpenSettings;
@@ -129,6 +130,14 @@ class MenuBuilder {
         label: 'Test',
         submenu: [
           { role: 'toggleDevTools' },
+          {
+            label: 'Open Telegram DevTools',
+            click: () => {
+              if (this.telegramView && this.telegramView.webContents) {
+                this.telegramView.webContents.openDevTools({ mode: 'detach' });
+              }
+            }
+          },
           { type: 'separator' },
           {
             label: 'Test Mandatory Update',

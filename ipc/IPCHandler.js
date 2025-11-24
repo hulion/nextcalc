@@ -15,6 +15,7 @@ class IPCHandler {
     this.configManager = null;
     this.idleDetector = null;
     this.updateManager = null;
+    this.lockManager = null;
     this.isUnlocked = false;
     this.handlers = new Map();
     this.isDev = false;
@@ -28,17 +29,19 @@ class IPCHandler {
    * @param {ConfigManager} options.configManager - 配置管理器實例
    * @param {IdleDetector} options.idleDetector - 閒置檢測器實例
    * @param {UpdateManager} options.updateManager - 更新管理器實例
+   * @param {LockManager} options.lockManager - 鎖定管理器實例
    * @param {Function} options.lockApp - 鎖定應用回調
    * @param {Function} options.createMenu - 創建菜單回調
    * @param {Function} options.unlockApp - 解鎖應用回調
    * @param {boolean} options.isDev - 是否為開發模式
    */
-  initialize({ mainWindow, telegramView, configManager, idleDetector, updateManager, lockApp, createMenu, unlockApp, isDev }) {
+  initialize({ mainWindow, telegramView, configManager, idleDetector, updateManager, lockManager, lockApp, createMenu, unlockApp, isDev }) {
     this.mainWindow = mainWindow;
     this.telegramView = telegramView;
     this.configManager = configManager;
     this.idleDetector = idleDetector;
     this.updateManager = updateManager;
+    this.lockManager = lockManager;
     this.lockApp = lockApp;
     this.createMenu = createMenu;
     this.unlockApp = unlockApp;
