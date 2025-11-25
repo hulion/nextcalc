@@ -90,7 +90,8 @@ class IPCHandler {
    */
   register(channel, handler) {
     if (this.handlers.has(channel)) {
-      console.warn(`[IPCHandler] Handler for '${channel}' already registered, overwriting...`);
+      console.log(`[IPCHandler] Handler for '${channel}' already registered, skipping...`);
+      return;
     }
 
     ipcMain.handle(channel, handler);
@@ -206,26 +207,32 @@ class IPCHandler {
   }
 
   /**
-   * 處理清除 Telegram 數據
+   * 處理清除 Telegram 數據（登出）
    */
   async handleClearTelegramData() {
-    console.log('[IPCHandler] Clearing Telegram data...');
-
-    const telegramDataPath = path.join(app.getPath('userData'), 'Partitions', 'telegram');
+    console.log('[IPCHandler] Logging out Telegram...');
 
     try {
-      if (fs.existsSync(telegramDataPath)) {
-        // 遞歸刪除目錄
-        fs.rmSync(telegramDataPath, { recursive: true, force: true });
-        console.log('[IPCHandler] Telegram data cleared successfully');
-        return { success: true, message: 'Telegram 數據已清除，請重啟應用' };
+      if (this.telegramView && this.telegramView.webContents) {
+        // 清除 Session Storage 和快取
+        await this.telegramView.webContents.session.clearStorageData({
+          storages: ['cookies', 'localstorage', 'sessionstorage']
+        });
+
+        console.log('[IPCHandler] Session data cleared');
+
+        // 重新載入 Telegram 頁面，使其回到登入狀態
+        this.telegramView.webContents.loadURL('https://web.telegram.org/k/');
+
+        console.log('[IPCHandler] Telegram logged out successfully');
+        return { success: true, message: 'Telegram 已登出' };
       } else {
-        console.log('[IPCHandler] Telegram data directory not found');
-        return { success: false, message: '找不到 Telegram 數據目錄' };
+        console.log('[IPCHandler] Telegram BrowserView not found');
+        return { success: false, message: '找不到 Telegram BrowserView' };
       }
     } catch (err) {
-      console.error('[IPCHandler] Failed to clear Telegram data:', err);
-      return { success: false, message: `清除失敗: ${err.message}` };
+      console.error('[IPCHandler] Failed to log out Telegram:', err);
+      return { success: false, message: `登出失敗: ${err.message}` };
     }
   }
 

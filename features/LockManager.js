@@ -28,6 +28,14 @@ class LockManager {
     this.idleDetector = options.idleDetector;
     this.ipcHandler = options.ipcHandler;
     this.onMenuRebuild = options.onMenuRebuild;
+
+    // Reset lock state when reinitializing (e.g., after window reopens)
+    this.isUnlocked = false;
+
+    // Also reset IPC handler's unlock state
+    if (this.ipcHandler) {
+      this.ipcHandler.setUnlocked(false);
+    }
   }
 
   /**

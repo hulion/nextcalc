@@ -62,9 +62,7 @@ class MainWindow {
       if (this.idleDetector) {
         this.idleDetector.stop();
       }
-      if (this.ipcHandler) {
-        this.ipcHandler.cleanup();
-      }
+      // Don't cleanup IPC handlers - they will be reused when window reopens
       this.mainWindow = null;
       this.telegramView = null;
     });
