@@ -12,6 +12,7 @@ class UpdateManager {
     this.updateInfo = null;
     this.isChecking = false;
     this.isDevelopment = false;
+    this.manualUpdateMode = true; // 手動更新模式（需要簽名才能自動更新）
 
     // 配置 autoUpdater
     autoUpdater.autoDownload = false; // 不自動下載,讓使用者選擇
@@ -61,25 +62,21 @@ class UpdateManager {
       this.updateInfo = info;
       this.isChecking = false;
 
-      // 檢查是否為必須更新 (從 release notes 中檢查 MANDATORY 標記)
-      const isMandatory = info.releaseNotes &&
-                         (info.releaseNotes.includes('[MANDATORY]') ||
-                          info.releaseNotes.includes('[必須更新]'));
-
       this.sendToRenderer('update-available', {
         version: info.version,
         releaseDate: info.releaseDate,
         releaseNotes: info.releaseNotes,
-        isMandatory: isMandatory
+        manualMode: this.manualUpdateMode // 通知前端是否為手動更新模式
       });
 
-      // 如果是必須更新，自動開始下載
-      if (isMandatory) {
-        console.log('[UpdateManager] Mandatory update - starting automatic download');
-        autoUpdater.downloadUpdate();
-      } else {
-        console.log('[UpdateManager] Optional update - waiting for user action');
+      // 手動更新模式：不自動下載，讓使用者選擇前往 GitHub 下載
+      if (this.manualUpdateMode) {
+        console.log('[UpdateManager] Manual update mode - waiting for user to visit GitHub releases');
+        return;
       }
+
+      // 自動更新模式（需要簽名）：等待使用者手動觸發下載
+      console.log('[UpdateManager] Waiting for user action to download update');
     });
 
     // 沒有可用更新
@@ -179,8 +176,20 @@ class UpdateManager {
       return;
     }
 
-    console.log('[UpdateManager] Installing update and restarting app...');
-    autoUpdater.quitAndInstall(false, true);
+    try {
+      console.log('[UpdateManager] Installing update and restarting app...');
+      // quitAndInstall 參數:
+      // - isSilent: false (顯示對話框)
+      // - isForceRunAfter: true (強制重啟後立即執行)
+      setImmediate(() => {
+        autoUpdater.quitAndInstall(false, true);
+      });
+    } catch (error) {
+      console.error('[UpdateManager] Failed to install update:', error);
+      this.sendToRenderer('update-error', {
+        message: `安裝更新失敗: ${error.message}`
+      });
+    }
   }
 
   /**
@@ -213,25 +222,22 @@ class UpdateManager {
   /**
    * 測試更新流程 (僅開發模式)
    * 模擬完整的更新流程,包括檢查、下載和安裝
-   * @param {boolean} isMandatory - 是否為強制更新
    */
-  testUpdateFlow(isMandatory = false) {
+  testUpdateFlow() {
     if (!this.isDevelopment) {
       console.log('[UpdateManager] Test update flow is only available in development mode');
       return;
     }
 
-    console.log(`[UpdateManager] Starting test update flow (${isMandatory ? 'MANDATORY' : 'OPTIONAL'})...`);
+    console.log('[UpdateManager] Starting test update flow...');
 
     // 步驟 1: 模擬發現更新 (1 秒後)
     setTimeout(() => {
       const mockUpdateInfo = {
         version: '99.99.99',
         releaseDate: new Date().toISOString(),
-        releaseNotes: isMandatory
-          ? '[必須更新] 這是一個重要的安全更新,必須立即安裝。'
-          : '這是一個可選更新,包含新功能和錯誤修復。',
-        isMandatory: isMandatory
+        releaseNotes: '這是一個可選更新,包含新功能和錯誤修復。',
+        manualMode: this.manualUpdateMode
       };
 
       // 儲存更新資訊供後續使用
@@ -240,12 +246,11 @@ class UpdateManager {
       console.log('[UpdateManager] Test: Update available');
       this.sendToRenderer('update-available', mockUpdateInfo);
 
-      // 步驟 2: 如果是必須更新，自動開始下載；否則等待使用者手動觸發
-      if (isMandatory) {
-        console.log('[UpdateManager] Test: Mandatory update - starting automatic download');
-        this.downloadUpdate();
+      // 手動更新模式：等待使用者點擊前往下載
+      if (this.manualUpdateMode) {
+        console.log('[UpdateManager] Test: Manual mode - waiting for user to click download button');
       } else {
-        console.log('[UpdateManager] Test: Optional update - waiting for user to click download button');
+        console.log('[UpdateManager] Test: Auto mode - waiting for user action');
       }
     }, 1000);
   }

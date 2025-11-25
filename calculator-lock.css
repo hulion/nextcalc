@@ -587,6 +587,11 @@ button.calc-btn.keyboard-pressed {
     color: #f97316;
 }
 
+/* 文字模式 - 正常大小的文字 */
+.floating-status.text-mode {
+    font-size: 12px;
+}
+
 /* 歷史紀錄覆蓋層 */
 .history-overlay {
     position: absolute;
@@ -1128,13 +1133,13 @@ body.production .fps-counter {
     transition: opacity 0.3s ease;
 }
 
-/* 可選更新樣式 - 左上角通知 */
+/* 可選更新樣式 - 右下角通知 */
 .update-notification.optional {
     background: transparent;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    justify-content: flex-start;
-    align-items: flex-start;
+    justify-content: flex-end;
+    align-items: flex-end;
     padding: 24px;
     pointer-events: none; /* 讓背景可以點擊穿透 */
 }

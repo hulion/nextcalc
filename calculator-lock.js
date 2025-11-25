@@ -512,6 +512,15 @@
                 floatingStatus.classList.add('status-info');
             }
 
+            // 檢查是否為純表情符號 (如果不是，添加 text-mode 類別使用正常字體大小)
+            const emojiRegex = /^[\p{Emoji}\p{Emoji_Modifier}\p{Emoji_Component}\p{Emoji_Modifier_Base}\p{Emoji_Presentation}]+$/u;
+            const isOnlyEmoji = emojiRegex.test(message.trim());
+
+            if (!isOnlyEmoji) {
+                // 文字訊息使用正常大小
+                floatingStatus.classList.add('text-mode');
+            }
+
             // 設置自動隱藏
             statusTimeout = setTimeout(() => {
                 floatingStatus.classList.remove('show');
@@ -1161,33 +1170,24 @@
             progressContainer.style.display = 'none';
             installBtn.disabled = false;
 
-            // 根據更新類型設定按鈕文字
-            if (updateInfo.isMandatory) {
-                // 必須更新會自動下載，按鈕顯示「立即重啟安裝」
-                installBtn.textContent = '立即重啟安裝';
-                installBtn.dataset.downloaded = 'false'; // 標記尚未下載
+            // 根據更新模式設定按鈕文字
+            if (updateInfo.manualMode) {
+                // 手動更新模式：顯示「前往下載」按鈕
+                installBtn.textContent = '前往下載';
+                installBtn.dataset.manualMode = 'true';
+                installBtn.dataset.downloaded = 'false';
             } else {
-                // 可選更新不自動下載，按鈕顯示「開始下載」
+                // 自動更新模式（需要簽名）：顯示「開始下載」按鈕
                 installBtn.textContent = '開始下載';
-                installBtn.dataset.downloaded = 'false'; // 標記尚未下載
+                installBtn.dataset.downloaded = 'false';
+                installBtn.dataset.manualMode = 'false';
             }
 
-            // 根據更新類型控制樣式、標題和按鈕可見性
-            if (updateInfo.isMandatory) {
-                // 必須更新:全螢幕遮罩,隱藏「稍後提醒」按鈕和關閉按鈕
-                notification.classList.remove('optional');
-                if (titleEl) titleEl.textContent = '重要更新';
-                if (laterBtn) laterBtn.style.display = 'none';
-                if (closeBtn) closeBtn.style.display = 'none';
-                console.log('[Calculator] Mandatory update - fullscreen modal');
-            } else {
-                // 可選更新:左上角通知,顯示「稍後提醒」按鈕和關閉按鈕
-                notification.classList.add('optional');
-                if (titleEl) titleEl.textContent = '有可用更新';
-                if (laterBtn) laterBtn.style.display = 'block';
-                if (closeBtn) closeBtn.style.display = 'block';
-                console.log('[Calculator] Optional update - top-left notification');
-            }
+            // 統一為可選更新樣式：左上角通知,顯示「稍後提醒」按鈕和關閉按鈕
+            notification.classList.add('optional');
+            if (titleEl) titleEl.textContent = '有可用更新';
+            if (laterBtn) laterBtn.style.display = 'block';
+            if (closeBtn) closeBtn.style.display = 'block';
 
             // 顯示通知
             notification.style.display = 'flex';
@@ -1195,12 +1195,10 @@
                 notification.classList.add('show');
             }, 10);
 
-            // 如果是可選更新，啟用拖移功能
-            if (!updateInfo.isMandatory) {
-                initializeDraggable(notification);
-            }
+            // 啟用拖移功能
+            initializeDraggable(notification);
 
-            console.log('[Calculator] Update notification shown:', updateInfo.version, 'isMandatory:', updateInfo.isMandatory);
+            console.log('[Calculator] Update notification shown:', updateInfo.version, 'manualMode:', updateInfo.manualMode);
         }
 
         // 初始化拖移功能
@@ -1215,8 +1213,18 @@
             let currentY;
             let initialX;
             let initialY;
+
+            // 從現有的 transform 讀取當前位置（如果有的話）
             let xOffset = 0;
             let yOffset = 0;
+            const currentTransform = card.style.transform;
+            if (currentTransform) {
+                const match = currentTransform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
+                if (match) {
+                    xOffset = parseFloat(match[1]);
+                    yOffset = parseFloat(match[2]);
+                }
+            }
 
             // 添加視覺提示
             header.style.cursor = 'move';
@@ -1316,11 +1324,26 @@
             }, 300);
         }
 
-        // 安裝更新（或開始下載）
+        // 安裝更新（或開始下載/前往下載）
         async function installUpdate() {
             const installBtn = document.getElementById('updateInstallBtn');
+            const isManualMode = installBtn.dataset.manualMode === 'true';
             const isDownloaded = installBtn.dataset.downloaded === 'true';
 
+            console.log('[Calculator] installUpdate called, manualMode:', isManualMode, 'isDownloaded:', isDownloaded);
+
+            // 手動更新模式：打開瀏覽器到 GitHub Releases
+            if (isManualMode) {
+                console.log('[Calculator] Manual mode - opening GitHub releases page');
+                if (window.electronAPI && window.electronAPI.openExternal) {
+                    window.electronAPI.openExternal('https://github.com/hulion/nextcalc/releases');
+                }
+                // 關閉更新通知
+                closeUpdateNotification();
+                return;
+            }
+
+            // 自動更新模式（需要簽名）
             if (!isDownloaded) {
                 // 尚未下載，開始下載
                 console.log('[Calculator] Starting update download...');
@@ -1334,6 +1357,7 @@
             if (window.electronAPI && window.electronAPI.installUpdate) {
                 // 檢查是否為開發模式
                 const isDev = await window.electronAPI.isDevelopment();
+                console.log('[Calculator] isDevelopment:', isDev);
 
                 if (isDev) {
                     // 測試模式：顯示訊息後關閉通知
@@ -1353,7 +1377,19 @@
                     }, 2000);
                 } else {
                     // 生產模式：立即安裝並重啟
-                    window.electronAPI.installUpdate();
+                    console.log('[Calculator] Production mode: Calling installUpdate to restart...');
+                    installBtn.textContent = '正在重啟...';
+                    installBtn.disabled = true;
+
+                    try {
+                        await window.electronAPI.installUpdate();
+                        console.log('[Calculator] installUpdate called successfully');
+                    } catch (error) {
+                        console.error('[Calculator] Failed to install update:', error);
+                        installBtn.textContent = '安裝失敗，請重試';
+                        installBtn.disabled = false;
+                        installBtn.style.background = '#ef4444'; // 紅色
+                    }
                 }
             }
         }
@@ -1375,5 +1411,17 @@
             window.electronAPI.onUpdateDownloaded((event, updateInfo) => {
                 console.log('[Calculator] Update downloaded:', updateInfo);
                 updateDownloadComplete(updateInfo);
+            });
+
+            // 更新錯誤
+            window.electronAPI.onUpdateError((event, error) => {
+                console.error('[Calculator] Update error:', error);
+                const installBtn = document.getElementById('updateInstallBtn');
+                if (installBtn) {
+                    installBtn.textContent = '更新失敗，請重試';
+                    installBtn.disabled = false;
+                    installBtn.style.background = '#ef4444'; // 紅色
+                    installBtn.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)'; // 紅色光暈
+                }
             });
         }

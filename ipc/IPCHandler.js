@@ -1,4 +1,4 @@
-const { ipcMain, Notification } = require('electron');
+const { ipcMain, Notification, shell } = require('electron');
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -78,6 +78,7 @@ class IPCHandler {
     // === 自動更新 ===
     this.register('install-update', this.handleInstallUpdate.bind(this));
     this.register('download-update', this.handleDownloadUpdate.bind(this));
+    this.register('open-external', this.handleOpenExternal.bind(this));
 
     console.log('[IPCHandler] All handlers registered');
   }
@@ -308,6 +309,20 @@ class IPCHandler {
       return true;
     }
     return false;
+  }
+
+  /**
+   * 處理打開外部連結
+   */
+  async handleOpenExternal(event, url) {
+    console.log('[IPCHandler] Opening external URL:', url);
+    try {
+      await shell.openExternal(url);
+      return true;
+    } catch (err) {
+      console.error('[IPCHandler] Failed to open external URL:', err);
+      return false;
+    }
   }
 
   /**

@@ -154,16 +154,6 @@ class MenuBuilder {
                 this.updateManager.testUpdateFlow(false);
               }
             }
-          },
-          {
-            label: 'Test Notifications',
-            click: () => {
-              if (this.mainWindow) {
-                this.mainWindow.loadFile('test-notification.html').then(() => {
-                  this.build();
-                });
-              }
-            }
           }
         ]
       });
