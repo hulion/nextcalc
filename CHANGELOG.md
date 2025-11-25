@@ -3,6 +3,14 @@
 此專案的所有重要變更都會記錄在此檔案中。
 
 
+### [1.3.1](https://github.com/hulion/nextcalc/compare/v1.3.0...v1.3.1) (2025-11-25)
+
+
+### 🐛 錯誤修復
+
+* 修復更新通知拖移功能並優化 UI ([f4291b8](https://github.com/hulion/nextcalc/commit/f4291b876baddc3244a3dcd3039a93ef7b0e0bc0))
+* 修復視窗關閉後重新打開無法解鎖及緊急模式不登出的問題 ([4821e42](https://github.com/hulion/nextcalc/commit/4821e425d45a725701e3a1c59e151d090eba2c99))
+
 ## [1.3.0](https://github.com/hulion/nextcalc/compare/v1.2.0...v1.3.0) (2025-11-24)
 
 
