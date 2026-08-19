@@ -1,6 +1,14 @@
 // Panic mode detector - detects "444444" pattern
 // This script runs in Telegram page to detect emergency logout
 
+// [task#100437 O5] Guard against double-install on the same document. injectPanicDetector()
+// runs on every did-finish-load; if executeJavaScript ever runs twice on one document the
+// keydown handler would be registered twice. Bail out if already installed.
+if (window.__nextcalcPanicDetectorInstalled) {
+    console.log('[Panic Detector] Already installed on this document, skipping');
+} else {
+    window.__nextcalcPanicDetectorInstalled = true;
+
 let panicSequence = '';
 const PANIC_CODE = '444444';
 let lastKeyTime = Date.now();
@@ -98,3 +106,5 @@ document.addEventListener('keydown', (event) => {
 });
 
 console.log('[Panic Detector] Initialized - Press Cmd+Escape to lock screen, or "4" six times quickly to emergency logout');
+
+} // end __nextcalcPanicDetectorInstalled guard

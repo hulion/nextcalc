@@ -3,9 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <title>NEXT Calc - 密碼設定</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,800;1,800&display=swap" rel="stylesheet">
+    <!-- [task#100437 O6] Barlow ExtraBold bundled locally (was Google Fonts / fonts.googleapis.com) -->
+    <style>
+        @font-face {
+            font-family: 'Barlow';
+            font-style: normal;
+            font-weight: 800;
+            font-display: swap;
+            src: url('assets/fonts/barlow-800-normal-latin.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Barlow';
+            font-style: italic;
+            font-weight: 800;
+            font-display: swap;
+            src: url('assets/fonts/barlow-800-italic-latin.woff2') format('woff2');
+        }
+    </style>
     <link rel="stylesheet" href="settings.css">
 </head>
 <body>

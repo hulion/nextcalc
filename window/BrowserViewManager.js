@@ -15,6 +15,9 @@ class BrowserViewManager {
     this.lockManager = null;
     this.idleDetector = null;
     this.isDev = false;
+    // [task#100437 O5] guard: idleDetector adds listeners to persistent webContents;
+    // did-finish-load fires on every reload (logout/menu reload) so init must run once only
+    this.idleDetectorInitialized = false;
   }
 
   /**
@@ -23,14 +26,24 @@ class BrowserViewManager {
   create(mainWindow) {
     this.mainWindow = mainWindow;
 
+    // [task#100437 O5] Reset the once-only idleDetector guard for EACH new BrowserView.
+    // This manager is a module-level singleton; on macOS the app survives window close
+    // (window-all-closed does not quit on darwin), so Dock re-open -> app 'activate' ->
+    // createApp() -> create() builds a fresh telegramView/webContents. Without this reset
+    // the stale flag would skip idleDetector.initialize() on the new webContents, leaving
+    // auto-lock wired to a destroyed webContents (core privacy feature regression).
+    // Semantics: same webContents reload -> flag stays true -> did-finish-load skips;
+    //            new webContents (here) -> flag false -> did-finish-load re-inits.
+    this.idleDetectorInitialized = false;
+
     // Create BrowserView for Telegram (hidden initially)
     this.telegramView = new BrowserView({
       webPreferences: {
         preload: path.join(__dirname, '..', 'preload.js'),
         contextIsolation: true,
         nodeIntegration: false,
-        webSecurity: true,
-        backgroundThrottling: false  // 確保在背景時仍能接收通知
+        webSecurity: true
+        // [task#100437 O2] backgroundThrottling removed pending notification A/B test — revert to `false` if TG notifications break in background
       }
     });
 
@@ -72,13 +85,15 @@ class BrowserViewManager {
         this.onTelegramLoaded();
       }
 
-      // Inject panic detector
+      // Inject panic detector (fresh document each load; script self-guards against double-install)
       setTimeout(() => {
         this.injectPanicDetector();
       }, 1000);
 
-      // Initialize idle detector with BrowserView
-      if (this.idleDetector) {
+      // [task#100437 O5] Initialize idle detector only once — its listeners live on the
+      // persistent telegramView/mainWindow webContents, so re-running on every reload
+      // would stack duplicate handlers that are never removed.
+      if (this.idleDetector && !this.idleDetectorInitialized) {
         this.idleDetector.initialize({
           mainWindow: this.mainWindow,
           telegramView: this.telegramView,
@@ -89,6 +104,7 @@ class BrowserViewManager {
           },
           isDev: this.isDev
         });
+        this.idleDetectorInitialized = true;
       }
     });
   }

@@ -4,10 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEXT Calc</title>
-    <!-- Google Font: Barlow ExtraBold (Italic for background, Normal for numbers) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,800;1,800&display=swap" rel="stylesheet">
+    <!-- [task#100437 O6] Barlow ExtraBold bundled locally (was Google Fonts / fonts.googleapis.com) -->
+    <!-- Removes outbound font requests + persistent preconnect (privacy: disguised app must not phone home) -->
+    <style>
+        @font-face {
+            font-family: 'Barlow';
+            font-style: normal;
+            font-weight: 800;
+            font-display: swap;
+            src: url('assets/fonts/barlow-800-normal-latin.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Barlow';
+            font-style: italic;
+            font-weight: 800;
+            font-display: swap;
+            src: url('assets/fonts/barlow-800-italic-latin.woff2') format('woff2');
+        }
+    </style>
     <link rel="stylesheet" href="calculator-lock.css">
 </head>
 <body class="dark">

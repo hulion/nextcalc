@@ -45,6 +45,7 @@
       "settings.html",
       "settings.css",
       "next-logo.svg",
+      "assets/**/*",
       "config/**/*",
       "features/**/*",
       "ipc/**/*",

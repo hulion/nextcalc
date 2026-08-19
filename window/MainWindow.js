@@ -73,6 +73,20 @@ class MainWindow {
         this.onResize();
       }
     });
+
+    // [task#100437 O1] Forward window visibility to the renderer so the lock-screen
+    // canvas animation stops when the window is hidden/minimized (backgrounded) and
+    // resumes on show/restore. Belt-and-suspenders alongside the renderer's
+    // document.visibilitychange (covers cases the Page Visibility API may miss).
+    const sendVisibility = (visible) => {
+      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+        this.mainWindow.webContents.send('window-visibility-changed', visible);
+      }
+    };
+    this.mainWindow.on('hide', () => sendVisibility(false));
+    this.mainWindow.on('minimize', () => sendVisibility(false));
+    this.mainWindow.on('show', () => sendVisibility(true));
+    this.mainWindow.on('restore', () => sendVisibility(true));
   }
 
   /**

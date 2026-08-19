@@ -156,6 +156,12 @@ app.on('will-quit', () => {
   // Unregister all global shortcuts
   globalShortcut.unregisterAll();
   console.log('[Main] Global shortcuts unregistered');
+
+  // [task#100437 O5] IPCHandler.cleanup() previously had no caller — remove all
+  // ipcMain handlers on quit. (Not done on window 'closed' by design: handlers are
+  // reused when the window reopens via app 'activate' on macOS.)
+  idleDetector.stop();
+  ipcHandler.cleanup();
 });
 
 // Set application name and about panel

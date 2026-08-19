@@ -106,6 +106,16 @@
                 this.animationFrameId = null;
                 this.isRunning = false;
 
+                // [task#100437 O1] 降幀節流：背景鎖屏動畫從 60fps 降到 ~30fps（時間戳節流，
+                // 不用 setInterval 疊 rAF）。減半每秒 canvas 重繪 → 連帶減半 8 層 backdrop-filter GPU 重算。
+                this.targetFps = 30;
+                this.frameInterval = 1000 / this.targetFps;
+                this._lastFrameTime = 0;
+
+                // [task#100437 O1] 生產環境不呼叫 fpsMonitor.update()（避免每秒對隱藏元素 innerHTML 重建）。
+                // 由 dev 判斷後設為 true（見檔尾初始化）。
+                this.fpsEnabled = false;
+
                 // 新增 FPS 監控器
                 this.fpsMonitor = new FPSMonitor();
 
@@ -137,6 +147,9 @@
                 this.autoRotateInterval = null;
                 this.idleTimer = null;
                 this.animationStartTime = Date.now();
+                // [task#100437 O1 nit] 保存已累積的動畫時間，讓可見性切換 resume 後捲動位置
+                // 從原處延續、不跳回原點（純視覺延續，不影響正確性/效能）
+                this._accumulatedElapsed = 0;
 
                 // 3D 翻轉動畫狀態
                 this.isFlipping = false;
@@ -206,13 +219,19 @@
             start() {
                 if (this.isRunning) return;
                 this.isRunning = true;
-                this.animationStartTime = Date.now();
+                // [task#100437 O1 nit] 補償已累積時間，捲動位置從暫停處延續（非跳回 0）
+                this.animationStartTime = Date.now() - this._accumulatedElapsed;
+                this._lastFrameTime = 0;  // [task#100437 O1] 確保恢復後第一幀立即繪製
                 this.startAutoRotation();
                 this.animate();
                 console.log('[CanvasMarquee] Started');
             }
 
             stop() {
+                // [task#100437 O1 nit] 只有「本來在跑」才累加已播放時間，避免重複 stop 多算導致前跳
+                if (this.isRunning) {
+                    this._accumulatedElapsed += Date.now() - this.animationStartTime;
+                }
                 this.isRunning = false;
                 if (this.animationFrameId) {
                     cancelAnimationFrame(this.animationFrameId);
@@ -232,11 +251,23 @@
                 console.log('[CanvasMarquee] Stopped');
             }
 
-            animate() {
+            animate(now) {
                 if (!this.isRunning) return;
 
-                // 更新 FPS 監控器
-                this.fpsMonitor.update();
+                // [task#100437 O1] 先排下一幀再決定是否繪製，跳過幀不會中斷迴圈
+                this.animationFrameId = requestAnimationFrame((t) => this.animate(t));
+
+                // 時間戳節流到 targetFps：距上次繪製不足一個 frameInterval 就跳過本幀
+                if (now === undefined) now = performance.now();
+                const sinceLast = now - this._lastFrameTime;
+                if (sinceLast < this.frameInterval) return;
+                // 對齊到 frameInterval 網格，避免長期漂移
+                this._lastFrameTime = now - (sinceLast % this.frameInterval);
+
+                // 更新 FPS 監控器（僅開發模式；生產不進 update，避免每秒 innerHTML 重建）
+                if (this.fpsEnabled) {
+                    this.fpsMonitor.update();
+                }
 
                 // 更新翻轉動畫
                 if (this.isFlipping) {
@@ -278,8 +309,7 @@
                 // 恢復狀態
                 this.ctx.restore();
 
-                // 請求下一幀
-                this.animationFrameId = requestAnimationFrame(() => this.animate());
+                // [task#100437 O1] 下一幀已於函式開頭排程，此處不再重複請求
             }
 
             drawRows(currentTime) {
@@ -825,6 +855,37 @@
             console.log('[Calculator] Background animations resumed');
         };
 
+        // === [task#100437 O1] 動畫可見性狀態機 ===
+        // 動畫只在「鎖定 且 視窗可見」時運行；視窗不可見（hidden/occluded/最小化）時停 rAF。
+        // 舊行為只綁鎖定態，但失焦 60 秒就自動鎖 → 放背景時全速 canvas 持續跑，正是背景高耗主因。
+        let isLockedState = true;               // App 啟動即為鎖定態
+        let isAppVisible = !document.hidden;    // 初始可見性
+
+        function updateAnimationState() {
+            const shouldRun = isLockedState && isAppVisible;
+            if (shouldRun) {
+                window.resumeBackgroundAnimations();
+            } else {
+                window.stopBackgroundAnimations();
+            }
+        }
+
+        // renderer 端可見性：視窗被遮蔽/最小化時 document.hidden 轉 true
+        document.addEventListener('visibilitychange', () => {
+            isAppVisible = !document.hidden;
+            console.log('[Calculator] visibilitychange → visible:', isAppVisible);
+            updateAnimationState();
+        });
+
+        // 主進程視窗事件（hide/show/minimize/restore）經 IPC 補強，涵蓋 document.hidden 未觸發的情境
+        if (window.electronAPI && window.electronAPI.onWindowVisibilityChanged) {
+            window.electronAPI.onWindowVisibilityChanged((event, visible) => {
+                isAppVisible = visible;
+                console.log('[Calculator] window-visibility-changed → visible:', visible);
+                updateAnimationState();
+            });
+        }
+
         // 键盘按键到按钮元素的映射表
         const keyToButtonMap = {
             '0': () => document.querySelector('button[onclick*="handleNumber(\'0\')"]'),
@@ -905,7 +966,8 @@
 
         // === 初始化 Canvas 背景跑馬燈 ===
         canvasMarquee = new CanvasMarquee('bgCanvas');
-        canvasMarquee.start();
+        // [task#100437 O1] 依可見性狀態機決定是否開跑（啟動即鎖定＋可見 → 會開跑）
+        updateAnimationState();
         startDisplayObserver();
         console.log('[Calculator] Canvas background marquee initialized');
 
@@ -914,6 +976,11 @@
             try {
                 const isDev = await window.electronAPI.isDevelopment();
                 const fpsCounter = document.getElementById('fpsCounter');
+
+                // [task#100437 O1] 只有開發模式才啟用 fpsMonitor.update()（生產完全不進 update）
+                if (canvasMarquee) {
+                    canvasMarquee.fpsEnabled = isDev;
+                }
 
                 if (!isDev && fpsCounter) {
                     // 生產環境:隱藏 FPS 檢測器
@@ -939,13 +1006,9 @@
         // 監聽來自 main process 的鎖定狀態變化
         window.electronAPI.onLockStateChanged((event, isLocked) => {
             console.log('[Calculator] Lock state changed:', isLocked ? 'Locked' : 'Unlocked');
-            if (isLocked) {
-                // 鎖定時恢復背景動畫
-                window.resumeBackgroundAnimations();
-            } else {
-                // 解鎖時停止背景動畫
-                window.stopBackgroundAnimations();
-            }
+            // [task#100437 O1] 鎖定態改由狀態機處理：只有「鎖定 且 可見」才跑動畫
+            isLockedState = isLocked;
+            updateAnimationState();
         });
 
         function openSettingsModal() {

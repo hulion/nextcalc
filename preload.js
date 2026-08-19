@@ -30,6 +30,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onLockStateChanged: (callback) => {
     ipcRenderer.on('lock-state-changed', callback);
   },
+  // [task#100437 O1] 主進程視窗可見性變化（hide/show/minimize/restore）→ renderer 停/開背景動畫
+  onWindowVisibilityChanged: (callback) => {
+    ipcRenderer.on('window-visibility-changed', callback);
+  },
   getIdleTime: () => {
     return ipcRenderer.invoke('get-idle-time');
   },
@@ -98,14 +102,9 @@ class ElectronNotification extends EventTarget {
       if (this.onerror) this.onerror(event);
     });
 
-    // Handle click from main process
-    const clickHandler = () => {
-      const event = new Event('click');
-      this.dispatchEvent(event);
-      if (this.onclick) this.onclick(event);
-    };
-
-    ipcRenderer.once(`notification-clicked-${this.tag || Date.now()}`, clickHandler);
+    // [task#100437 O5] Removed dead `notification-clicked-*` ipcRenderer.once listener:
+    // the main process never sends that channel, so every notification leaked an
+    // uncleared listener (unique channel per Date.now()) holding its closure.
   }
 
   close() {
