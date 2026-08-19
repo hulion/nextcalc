@@ -26,6 +26,14 @@ const menuBuilder = new MenuBuilder();
 // Development mode detection
 const isDev = !app.isPackaged;
 
+// [task#100439 O4] Cap Chromium's HTTP disk cache. By default it has no explicit
+// ceiling and grows one-way (audit S4). 300 MB balances asset/media re-fetch cost
+// against unbounded disk growth. Must run before app 'ready' (top-level does).
+// This only bounds the HTTP disk cache — it does NOT touch cookies / localStorage /
+// IndexedDB / CacheStorage, so the Telegram login session is unaffected.
+const HTTP_DISK_CACHE_BYTES = 300 * 1024 * 1024; // 300 MB
+app.commandLine.appendSwitch('disk-cache-size', String(HTTP_DISK_CACHE_BYTES));
+
 /**
  * 建立應用程式視窗和所有組件
  */
@@ -42,6 +50,9 @@ function createApp() {
     telegramView,
     idleDetector,
     ipcHandler,
+    // [task#100439 O3a] LockManager attaches/detaches the TG BrowserView on
+    // unlock/lock via BrowserViewManager (detach = drop compositing while locked).
+    browserViewManager,
     onMenuRebuild: () => {
       menuBuilder.build();
     }
@@ -162,6 +173,9 @@ app.on('will-quit', () => {
   // reused when the window reopens via app 'activate' on macOS.)
   idleDetector.stop();
   ipcHandler.cleanup();
+
+  // [task#100439 O4] Symmetric cleanup of the periodic HTTP-cache timer.
+  browserViewManager.stopCacheCleanup();
 });
 
 // Set application name and about panel

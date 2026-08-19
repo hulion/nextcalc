@@ -17,6 +17,8 @@ class LockManager {
     this.ipcHandler = null;
     this.settingsWindow = null;
     this.onMenuRebuild = null;
+    // [task#100439 O3a] Used to attach/detach the TG BrowserView on unlock/lock.
+    this.browserViewManager = null;
   }
 
   /**
@@ -28,6 +30,7 @@ class LockManager {
     this.idleDetector = options.idleDetector;
     this.ipcHandler = options.ipcHandler;
     this.onMenuRebuild = options.onMenuRebuild;
+    this.browserViewManager = options.browserViewManager;
 
     // Reset lock state when reinitializing (e.g., after window reopens)
     this.isUnlocked = false;
@@ -80,10 +83,19 @@ class LockManager {
         this.settingsWindow.close();
       }
 
-      // Hide Telegram BrowserView (move off-screen but keep webContents active for notifications)
-      console.log('[LockManager] Locking app - hiding BrowserView (moving off-screen, webContents stays active)');
-      const bounds = this.mainWindow.getContentBounds();
-      this.telegramView.setBounds({ x: 0, y: -10000, width: bounds.width, height: bounds.height });
+      // [task#100439 O3a] Detach the Telegram BrowserView (removeBrowserView) instead
+      // of just moving it off-screen. Detaching stops it from being composited/rendered
+      // while locked (locked is the background steady-state). webContents is NOT
+      // destroyed, so the session stays and notifications (Service Worker) keep working.
+      if (this.browserViewManager) {
+        console.log('[LockManager] Locking app - detaching BrowserView (webContents stays active)');
+        this.browserViewManager.detachView();
+      } else {
+        // Fallback (should not happen): legacy off-screen hide keeps TG hidden while locked.
+        console.warn('[LockManager] browserViewManager missing - falling back to off-screen hide');
+        const bounds = this.mainWindow.getContentBounds();
+        this.telegramView.setBounds({ x: 0, y: -10000, width: bounds.width, height: bounds.height });
+      }
 
       // Update window title
       this.mainWindow.setTitle('NEXT Calc');
@@ -138,10 +150,17 @@ class LockManager {
         this.ipcHandler.setUnlocked(true);
       }
 
-      // Show Telegram BrowserView
-      console.log('[LockManager] Unlocking app - showing BrowserView');
-      const bounds = this.mainWindow.getContentBounds();
-      this.telegramView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
+      // [task#100439 O3a] Re-attach the Telegram BrowserView (addBrowserView + reset
+      // bounds). A detached view must be re-added and re-bounded to become visible again.
+      if (this.browserViewManager) {
+        console.log('[LockManager] Unlocking app - attaching BrowserView');
+        this.browserViewManager.attachView();
+      } else {
+        // Fallback (should not happen): legacy off-screen -> on-screen move.
+        console.warn('[LockManager] browserViewManager missing - falling back to on-screen move');
+        const bounds = this.mainWindow.getContentBounds();
+        this.telegramView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
+      }
 
       // Update window title
       this.mainWindow.setTitle('NEXT Telegram');

@@ -18,6 +18,11 @@ class BrowserViewManager {
     // [task#100437 O5] guard: idleDetector adds listeners to persistent webContents;
     // did-finish-load fires on every reload (logout/menu reload) so init must run once only
     this.idleDetectorInitialized = false;
+    // [task#100439 O3a] Whether telegramView is currently added to the window.
+    // App starts locked, so the view loads but is NOT attached until first unlock.
+    this.isViewAttached = false;
+    // [task#100439 O4] Handle for the periodic HTTP-cache cleanup timer.
+    this.cacheClearTimer = null;
   }
 
   /**
@@ -35,6 +40,8 @@ class BrowserViewManager {
     // Semantics: same webContents reload -> flag stays true -> did-finish-load skips;
     //            new webContents (here) -> flag false -> did-finish-load re-inits.
     this.idleDetectorInitialized = false;
+    // [task#100439 O3a] Fresh view starts detached; first unlock attaches it.
+    this.isViewAttached = false;
 
     // Create BrowserView for Telegram (hidden initially)
     this.telegramView = new BrowserView({
@@ -47,23 +54,86 @@ class BrowserViewManager {
       }
     });
 
-    // Add BrowserView to window immediately
-    this.mainWindow.addBrowserView(this.telegramView);
-
-    // Get window bounds
-    const bounds = this.mainWindow.getContentBounds();
-
-    // Set BrowserView bounds (move far off-screen initially since app starts locked)
-    this.telegramView.setBounds({ x: 0, y: -10000, width: bounds.width, height: bounds.height });
-    this.telegramView.setAutoResize({ width: true, height: true });
+    // [task#100439 O3a] Do NOT addBrowserView here. The app starts locked, so the
+    // view would only be composited off-screen (wasted work). We load the URL now
+    // (Telegram + its Service Worker initialise, so notifications work while locked)
+    // but defer attach to the first unlock (LockManager -> attachView()).
+    // No pre-attach setBounds/setAutoResize: per Electron (issue #20064) those are
+    // no-ops before the view is added to a window. attachView() sets bounds after add.
 
     // Setup event handlers
     this.setupEventHandlers();
 
-    // Load Telegram in BrowserView
+    // Load Telegram in BrowserView (works whether or not the view is attached)
     this.telegramView.webContents.loadURL('https://web.telegram.org/k/');
 
+    // [task#100439 O4] Start the periodic HTTP-cache cleanup timer for this view.
+    this.setupCacheCleanup();
+
     return this.telegramView;
+  }
+
+  /**
+   * [task#100439 O3a] 將 Telegram BrowserView attach 回主視窗（解鎖時呼叫）
+   * detach 過的 view 重新 addBrowserView 後必須重設 bounds 才會顯示在正確位置。
+   */
+  attachView() {
+    if (!this.telegramView || !this.mainWindow || this.mainWindow.isDestroyed()) return;
+    if (this.isViewAttached) return; // idempotent guard, avoid double add
+
+    this.mainWindow.addBrowserView(this.telegramView);
+    const bounds = this.mainWindow.getContentBounds();
+    this.telegramView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
+    this.telegramView.setAutoResize({ width: true, height: true });
+    this.isViewAttached = true;
+    console.log('[BrowserViewManager] BrowserView attached (unlock)');
+  }
+
+  /**
+   * [task#100439 O3a] 將 Telegram BrowserView 從主視窗 detach（鎖定時呼叫）
+   * 只 removeBrowserView（停止合成/渲染），不 destroy webContents —— session 與
+   * Service Worker 通知不受影響。對已 detach 的 view 不重複操作。
+   */
+  detachView() {
+    if (!this.telegramView || !this.mainWindow || this.mainWindow.isDestroyed()) return;
+    if (!this.isViewAttached) return; // already detached, nothing to do
+
+    this.mainWindow.removeBrowserView(this.telegramView);
+    this.isViewAttached = false;
+    console.log('[BrowserViewManager] BrowserView detached (lock) — webContents kept alive');
+  }
+
+  /**
+   * [task#100439 O4] 定期只清 HTTP cache（session.clearCache），限制 disk-cache
+   * 單向增長。clearCache 不動 cookies / localStorage / IndexedDB / CacheStorage，
+   * 故不會登出 Telegram。每次 create() 都會先清掉舊 timer，避免視窗重建後累積。
+   */
+  setupCacheCleanup() {
+    if (this.cacheClearTimer) {
+      clearInterval(this.cacheClearTimer);
+      this.cacheClearTimer = null;
+    }
+
+    const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+    this.cacheClearTimer = setInterval(() => {
+      if (this.telegramView &&
+          this.telegramView.webContents &&
+          !this.telegramView.webContents.isDestroyed()) {
+        this.telegramView.webContents.session.clearCache()
+          .then(() => console.log('[BrowserViewManager] HTTP cache cleared (periodic)'))
+          .catch(err => console.error('[BrowserViewManager] clearCache failed:', err));
+      }
+    }, TWELVE_HOURS_MS);
+  }
+
+  /**
+   * [task#100439 O4] 停止週期 cache 清理 timer（quit 時對稱清理）。
+   */
+  stopCacheCleanup() {
+    if (this.cacheClearTimer) {
+      clearInterval(this.cacheClearTimer);
+      this.cacheClearTimer = null;
+    }
   }
 
   /**
