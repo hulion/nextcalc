@@ -10,3 +10,6 @@ out/
 
 # Claude Code 相關檔案 (本地設定)
 .claude/
+
+# 內部規範文件 (不隨公開 repo 發佈)
+REMOTE_WIPE.md
