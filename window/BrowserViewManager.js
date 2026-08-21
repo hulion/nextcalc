@@ -12,9 +12,10 @@
  *   - webContents is NOT destroyed with the window -> MainWindow 'closed' closes it
  */
 
-const { WebContentsView } = require('electron');
+const { WebContentsView, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { classifyNavigation } = require('./urlPolicy');
 
 class BrowserViewManager {
   constructor() {
@@ -79,6 +80,12 @@ class BrowserViewManager {
     // Setup event handlers
     this.setupEventHandlers();
 
+    // [task#100449] Wire link routing BEFORE loadURL so the very first document is
+    // already covered. Must stay out of did-finish-load: that fires on every reload
+    // and would stack duplicate will-navigate listeners on the same webContents
+    // (the O5 trap). Here it runs exactly once per freshly constructed webContents.
+    this.setupExternalLinkHandling();
+
     // Load Telegram in the view (works whether or not the view is attached)
     this.telegramView.webContents.loadURL('https://web.telegram.org/k/');
 
@@ -120,6 +127,68 @@ class BrowserViewManager {
     this.mainWindow.contentView.removeChildView(this.telegramView);
     this.isViewAttached = false;
     console.log('[BrowserViewManager] WebContentsView detached (lock) — webContents kept alive');
+  }
+
+  /**
+   * [task#100449] 外部連結改用系統預設瀏覽器開啟
+   *
+   * 兩個出口都要掛，缺一即漏：
+   *   1. `setWindowOpenHandler` — `target="_blank"` / `window.open()`
+   *   2. `will-navigate`        — 同 frame 整頁導航（`location.href = ...`、普通 <a> 點擊）
+   * 兩者共用 `urlPolicy.classifyNavigation()`，白名單只有一份。
+   *
+   * 注意 hash / history（pushState）切換對話**不會**觸發 will-navigate（那走
+   * did-navigate-in-page），所以 TG 內部換聊天室不受影響。`webContents.loadURL()`
+   * 這種主程序發起的導航也不觸發 will-navigate，初始載入不受影響。
+   */
+  setupExternalLinkHandling() {
+    const wc = this.telegramView.webContents;
+
+    // --- 出口 1：新視窗 / 新分頁請求 ---
+    wc.setWindowOpenHandler(({ url }) => {
+      const verdict = classifyNavigation(url);
+
+      if (verdict === 'external') {
+        this.openInSystemBrowser(url, 'window-open');
+      } else {
+        // internal / passthru / block 一律不開第二個視窗：這是偽裝成計算機的 app，
+        // 憑空多一個裸 TG 視窗等於破功。站內 t.me / web.telegram.org 由 TG Web 自己
+        // 在頁內處理（實測 handler 多半收不到），這裡只保證不外洩、不生視窗。
+        console.log(`[BrowserViewManager] window-open denied (${verdict}): ${url}`);
+      }
+
+      return { action: 'deny' };
+    });
+
+    // --- 出口 2：同 frame 導航 ---
+    wc.on('will-navigate', (event, url) => {
+      const verdict = classifyNavigation(url);
+
+      // 站內導航（web.telegram.org/a/ 之類）與瀏覽器內部協定照原本行為放行
+      if (verdict === 'internal' || verdict === 'passthru') {
+        console.log(`[BrowserViewManager] navigation allowed (${verdict}): ${url}`);
+        return;
+      }
+
+      event.preventDefault();
+      if (verdict === 'external') {
+        this.openInSystemBrowser(url, 'will-navigate');
+      } else {
+        console.log(`[BrowserViewManager] navigation blocked (${verdict}): ${url}`);
+      }
+    });
+  }
+
+  /**
+   * [task#100449] 交給系統預設瀏覽器 / 系統協定處理器。
+   * 只由 setupExternalLinkHandling 在 classifyNavigation 判為 external 後呼叫
+   * （協定已限定 http(s)/mailto/tg，不會把任意自訂協定丟給 LaunchServices）。
+   */
+  openInSystemBrowser(url, origin) {
+    console.log(`[BrowserViewManager] external link -> system browser (${origin}): ${url}`);
+    shell.openExternal(url)
+      .then(() => console.log(`[BrowserViewManager] openExternal ok: ${url}`))
+      .catch(err => console.error(`[BrowserViewManager] openExternal failed: ${url}`, err));
   }
 
   /**

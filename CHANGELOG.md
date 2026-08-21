@@ -7,6 +7,14 @@
 
 > 執行環境大版本升級。使用者可見功能不變，故為 minor 而非 major。
 
+### ✨ 新功能
+
+* Telegram 訊息裡的外部連結改用系統預設瀏覽器開啟（不再在 app 內開啟，也不會多開裸 Telegram 視窗）
+  - `target="_blank"` / `window.open()` 與同 frame 導航（`location.href`）兩個出口都攔
+  - Telegram 自家網域（`web.telegram.org`、`*.telegram.org`、`t.me`）仍留在 app 內；切換對話等站內導航不受影響
+  - 白名單以 hostname 精確比對（`window/urlPolicy.js`），`https://evil.com/web.telegram.org` 這類仿冒網址判為外部
+  - 只有 `http(s)` / `mailto:` / `tg:` 會交給系統，其餘協定一律攔下不外送
+
 ### 🔨 建置系統
 
 * 升級 Electron `^28.0.0` → `41.10.6`（Chromium 120 → 146.0.7680.216、Node 18 → 24.18.0）
