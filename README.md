@@ -1,6 +1,6 @@
 # NextCalc
 
-macOS Telegram 桌面應用程式，含計算機風格鎖定畫面。以 Electron BrowserView 架構執行 Telegram Web，鎖定畫面為一個功能完整的計算機。
+macOS Telegram 桌面應用程式，含計算機風格鎖定畫面。以 Electron WebContentsView 架構執行 Telegram Web，鎖定畫面為一個功能完整的計算機。
 
 ## 功能特色
 
@@ -29,8 +29,10 @@ npm start
 ### 3. 建置 DMG 安裝檔（macOS）
 
 ```bash
-npm run build-dmg
+npm run build
 ```
+
+產物在 `dist/`：`NextCalc-<版本>-arm64.dmg`（安裝用）、`NextCalc-<版本>-arm64-mac.zip` 與 `latest-mac.yml`（更新用）。
 
 ## 基本操作
 
@@ -100,7 +102,7 @@ npm run build-dmg
    - 密碼會立即生效
 
 2. **設定自動鎖定時間**
-   - 輸入閒置秒數（例如：300 = 5 分鐘）
+   - 從預設選項挑一個：30 秒 / 1 分鐘 / 3 分鐘 / 5 分鐘 / 10 分鐘 / 永不
    - 點擊「儲存設定」
    - 超過設定時間沒有操作會自動鎖定
 
@@ -111,8 +113,8 @@ npm run build-dmg
 ### 自動鎖定
 
 應用程式會監測使用者活動：
-- 預設閒置時間：5 分鐘（300 秒）
-- 可在設定中自訂閒置時間
+- 預設閒置時間：60 秒（`config/ConfigManager.js` 的 `DEFAULT_IDLE_TIMEOUT`）
+- 可在設定中改為 30 秒 / 1 分鐘 / 3 分鐘 / 5 分鐘 / 10 分鐘 / 永不
 - 超過設定時間沒有鍵盤或滑鼠活動會自動鎖定
 - 鎖定後需要輸入密碼才能繼續使用
 
@@ -132,15 +134,15 @@ tg_mac_electron/
 ## 運作原理
 
 1. **啟動**：應用程式啟動時顯示 `calculator-lock.html`
-2. **BrowserView**：Telegram Web 載入在背景的 BrowserView 中（位於畫面外）
-3. **解鎖**：輸入正確密碼後，BrowserView 移動到可見位置
-4. **鎖定**：鎖定時 BrowserView 移動到畫面外（y: -10000），顯示計算機畫面
+2. **WebContentsView**：Telegram Web 載入在一個 WebContentsView 中，啟動時**不掛到主視窗**
+3. **解鎖**：輸入正確密碼後，view 掛回主視窗（`contentView.addChildView`）並重設尺寸
+4. **鎖定**：view 從主視窗摘下（`contentView.removeChildView`），停止合成與渲染，顯示計算機畫面；Telegram 的 `webContents` 保持存活，不需重新登入
 5. **資料重設**：偵測特定按鍵序列，觸發資料清除並返回計算機畫面
 
 ## 資料儲存
 
-- 密碼儲存在：`~/Library/Application Support/telegram-calculator/config.json`
-- Telegram 資料儲存在：`~/Library/Application Support/telegram-calculator/telegram-data/`
+- 密碼儲存在：`~/Library/Application Support/next-calc/config.json`
+- Telegram 資料儲存在：`~/Library/Application Support/next-calc/telegram-data/`
 - 資料重設會刪除以上所有資料
 
 ## 常見問題
@@ -152,7 +154,7 @@ A: 有兩種方式：
 1. 在計算機畫面輸入資料重設序列，清除資料並將密碼回復為預設值
 2. 手動刪除設定檔：
    ```bash
-   rm ~/Library/Application\ Support/telegram-calculator/config.json
+   rm ~/Library/Application\ Support/next-calc/config.json
    ```
    然後重新啟動應用程式
 
@@ -163,7 +165,7 @@ A:
 1. 刪除應用程式：將 NextCalc.app 移到垃圾桶
 2. 刪除資料檔案：
    ```bash
-   rm -rf ~/Library/Application\ Support/telegram-calculator/
+   rm -rf ~/Library/Application\ Support/next-calc/
    ```
 
 ### Q: 資料重設會刪除哪些資料？
@@ -182,9 +184,10 @@ A: 它是一個功能完整的計算機，鎖定狀態下仍可正常運算使�
 
 ## 系統需求
 
-- macOS 10.13 或更高版本
-- Node.js 14 或更高版本
-- Electron 最新版
+- **macOS 12.0 或更高版本**（Electron 41 起不再支援 macOS 11 及更早版本）
+- Apple Silicon（arm64）發布版；自行建置才需要 Node.js
+- 開發環境：Node.js >= 22.12.0（`electron` 套件的 `engines` 要求；本機建置實測用 v23.8.0）
+- Electron 41.10.6（版本已釘住，見 `package.json`）
 
 ## 開發資訊
 
@@ -200,11 +203,20 @@ A: 它是一個功能完整的計算機，鎖定狀態下仍可正常運算使�
 
 ## 版本歷史
 
-### v2.0 (目前版本)
+完整紀錄見 `CHANGELOG.md`，以下只列架構層級的里程碑。
+
+### v1.4.0（目前版本）
+
+- 升級 Electron 至 41.10.6（Chromium 146 / Node 24）
+- BrowserView 遷移至 WebContentsView（BrowserView 自 Electron 30 起棄用）
+- 最低系統需求提升至 macOS 12.0
+- 修復視窗縮放與監聽器洩漏
+
+### 早期版本
 
 - 修復計算機狀態重置錯誤
 - 移除未使用的檔案（calculator.html, test-notification.html 等）
-- 簡化為純 BrowserView 架構
+- 簡化為純 BrowserView 架構（已於 1.4.0 汰換）
 - 新增完整的操作文件
 
 ### v1.0 (初始版本)

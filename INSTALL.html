@@ -365,7 +365,7 @@
     </div>
     <dl class="meta">
       <dt>版本</dt>
-      <dd>1.3.1</dd>
+      <dd>1.4.0</dd>
       <dt>架構</dt>
       <dd>macOS arm64（Apple Silicon）</dd>
       <dt>簽名</dt>
@@ -379,7 +379,7 @@
       <h2>安裝</h2>
       <p class="sub">把 app 從磁碟映像檔搬進「應用程式」資料夾。</p>
       <ol class="flow">
-        <li>雙擊 <code>NextCalc-1.3.1-arm64.dmg</code> 掛載磁碟映像檔。</li>
+        <li>雙擊 <code>NextCalc-1.4.0-arm64.dmg</code> 掛載磁碟映像檔。</li>
         <li>視窗開啟後，把左側的 <strong>NextCalc</strong> 圖示拖到右側的 <strong>Applications</strong>（應用程式）捷徑上。</li>
         <li>複製完成後，在 Finder 側邊欄按下 NextCalc 磁碟旁的退出符號，或在桌面上對它按右鍵選「退出」。</li>
         <li>DMG 檔案本身可以刪除，安裝好的 app 位於 <code>/Applications/NextCalc.app</code>。</li>
@@ -387,7 +387,7 @@
       <div class="callout">
         <span class="label">命令列替代做法</span>
         也可以用終端機完成掛載與複製：
-        <pre><code>hdiutil attach NextCalc-1.3.1-arm64.dmg
+        <pre><code>hdiutil attach NextCalc-1.4.0-arm64.dmg
 cp -R /Volumes/NextCalc*/NextCalc.app /Applications/
 hdiutil detach /Volumes/NextCalc*</code></pre>
       </div>
@@ -401,19 +401,23 @@ hdiutil detach /Volumes/NextCalc*</code></pre>
       <p class="sub">此版本為 ad-hoc 無簽名建置，第一次開啟需要手動放行一次。</p>
       <p style="margin-top:0">直接雙擊會看到「無法打開，因為它來自未識別的開發者」或「無法驗證開發者」的提示。這是 macOS Gatekeeper 對未經 Apple 公證的 app 的預設阻擋，<strong>放行一次之後就不會再出現</strong>。</p>
       <ol class="flow">
-        <li>在 <code>/Applications</code> 內對 <strong>NextCalc</strong> 按<strong>右鍵</strong>（或按住 Control 點一下），選擇「<strong>打開</strong>」。</li>
-        <li>在跳出的對話框再按一次「<strong>打開</strong>」。</li>
-        <li>若對話框沒有出現「打開」選項，前往「系統設定 → 隱私權與安全性」，在下方找到被阻擋的 NextCalc，按「<strong>仍要打開</strong>」。</li>
+        <li><strong>先雙擊一次</strong> <code>/Applications</code> 內的 NextCalc。這一次一定會被拒絕，但這步不能省 —— 系統要先記錄到這個 app 被阻擋，下一步的按鈕才會出現。</li>
+        <li>開啟「<strong>系統設定 → 隱私權與安全性</strong>」，往下捲到「安全性」區塊，會看到「已阻止使用 NextCalc」的訊息，按旁邊的「<strong>仍要打開</strong>」。</li>
+        <li>在跳出的確認對話框再按一次「<strong>打開</strong>」，必要時輸入登入密碼或使用 Touch ID。</li>
       </ol>
+      <div class="callout warn">
+        <span class="label">已失效的舊做法</span>
+        過去教的「對 app 按右鍵 → 打開」<strong>在 macOS 15（Sequoia）之後已被 Apple 移除</strong>，右鍵選單裡的「打開」不再能覆寫 Gatekeeper。請照上面的「系統設定」流程操作。
+      </div>
       <div class="callout">
-        <span class="label">命令列替代做法</span>
-        直接移除隔離屬性，之後即可正常雙擊開啟：
-        <pre><code>xattr -d com.apple.quarantine /Applications/NextCalc.app</code></pre>
-        若顯示 <code>No such xattr</code>，表示該屬性本來就不存在，可以忽略。
+        <span class="label">進階做法（命令列，不保證長期有效）</span>
+        會用終端機的話，也可以直接移除隔離屬性，之後即可正常雙擊開啟：
+        <pre><code>xattr -dr com.apple.quarantine /Applications/NextCalc.app</code></pre>
+        若顯示 <code>No such xattr</code>，表示該屬性本來就不存在，可以忽略。Apple 官方文件從未把這個做法列為支援途徑，未來版本可能失效；主要路徑請走上面的系統設定。
       </div>
       <div class="callout warn">
         <span class="label">注意</span>
-        右鍵「打開」與 <code>xattr</code> 兩種做法選一種即可，不需要同時執行。
+        「系統設定放行」與 <code>xattr</code> 兩種做法選一種即可，不需要同時執行。用隨附的 <code>install.sh</code> 安裝時腳本已自動處理隔離屬性，通常不會遇到這個阻擋。
       </div>
     </div>
   </section>
@@ -471,7 +475,7 @@ hdiutil detach /Volumes/NextCalc*</code></pre>
   </section>
 
   <footer>
-    NextCalc 1.3.1 · macOS arm64 · ad-hoc 無簽名建置
+    NextCalc 1.4.0 · macOS arm64 · ad-hoc 無簽名建置
   </footer>
 
 </div>

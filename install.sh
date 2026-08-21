@@ -112,7 +112,7 @@ if /usr/bin/xattr -p com.apple.quarantine "$APP_DEST" >/dev/null 2>&1; then
   if /usr/bin/xattr -dr com.apple.quarantine "$APP_DEST" 2>/dev/null; then
     log "已移除 com.apple.quarantine"
   else
-    warn "移除隔離屬性失敗。首次開啟請對 ${APP_NAME} 按右鍵 → 打開。"
+    warn "移除隔離屬性失敗。首次開啟請先雙擊一次（會被拒），再到「系統設定 → 隱私權與安全性」按 ${APP_NAME} 的「仍要打開」。"
   fi
 else
   log "無 com.apple.quarantine 屬性，略過"
@@ -132,5 +132,6 @@ else
 fi
 
 printf '%b' "\n✓ ${APP_NAME} 安裝完成：${APP_DEST}\n"
-printf '%b' "  首次開啟若仍被 Gatekeeper 阻擋，對 app 按右鍵 → 打開，再按一次「打開」即可。\n"
+printf '%b' "  首次開啟若被 Gatekeeper 阻擋：先雙擊一次（會被拒），再到「系統設定 → 隱私權與安全性」，在下方找到 ${APP_NAME} 按「仍要打開」。\n"
+printf '%b' "  （macOS 15 起「右鍵 → 打開」已被 Apple 移除，不再有效。）\n"
 printf '%b' "  建議設定通知：系統設定 → 通知 → ${APP_NAME} → 顯示預覽 → 解鎖時。\n\n"

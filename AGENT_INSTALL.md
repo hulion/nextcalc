@@ -8,11 +8,12 @@
 - 平台：macOS arm64（Apple Silicon）
 - 簽名：**ad-hoc、無 Apple 開發者簽名、未公證** → 首次開啟必被 Gatekeeper 阻擋，需要放行一次
 - 使用者資料在 app 套件之外：`~/Library/Application Support/next-calc`（覆蓋安裝不會動到它）
+- 系統需求：**macOS 12.0 或更高版本**（1.4.0 起，`minimumSystemVersion` = 12.0）
 
 ## 首選路徑：執行 install.sh
 
 ```bash
-bash install.sh /path/to/NextCalc-1.3.1-arm64.dmg
+bash install.sh /path/to/NextCalc-1.4.0-arm64.dmg
 ```
 
 DMG 與腳本放在同一個目錄時，可以省略參數，腳本會自動挑同目錄（或其 `dist/`）內最新的 `NextCalc-*.dmg`：
@@ -42,11 +43,11 @@ bash install.sh
 
 ```bash
 hdiutil attach -nobrowse -readonly <dmg>
-cp -R "/Volumes/NextCalc 1.3.1-arm64/NextCalc.app" /Applications/
-hdiutil detach "/Volumes/NextCalc 1.3.1-arm64"
+cp -R "/Volumes/NextCalc 1.4.0-arm64/NextCalc.app" /Applications/
+hdiutil detach "/Volumes/NextCalc 1.4.0-arm64"
 ```
 
-掛載點名稱含版本號與架構（1.3.1 的實測值是 `/Volumes/NextCalc 1.3.1-arm64`），換版本就會變，不要寫死。用 `hdiutil attach` 輸出的最後一欄，或這樣取得：
+掛載點名稱含版本號與架構（1.4.0 的實測值是 `/Volumes/NextCalc 1.4.0-arm64`），換版本就會變，不要寫死。用 `hdiutil attach` 輸出的最後一欄，或這樣取得：
 
 ```bash
 MOUNT="$(hdiutil attach -nobrowse -readonly <dmg> | awk -F'\t' '/\/Volumes\//{print $NF; exit}')"
@@ -67,7 +68,11 @@ open /Applications/NextCalc.app
 
 `xattr` 顯示 `No such xattr` 表示該屬性本來就不存在，屬正常情況，不是錯誤。
 
-無法用命令列時，請使用者對 `/Applications` 內的 NextCalc 按**右鍵 → 打開**，在對話框再按一次「打開」；若沒有「打開」選項，到「系統設定 → 隱私權與安全性」，在下方按 NextCalc 的「仍要打開」。
+無法用命令列時，請使用者照這個順序操作（**「右鍵 → 打開」自 macOS 15 起已被 Apple 移除，不要再教這招**）：
+
+1. 先雙擊一次 `/Applications` 內的 NextCalc —— 這次一定會被拒絕，但系統必須先記錄到這次阻擋，下一步的按鈕才會出現。
+2. 開啟「系統設定 → 隱私權與安全性」，捲到「安全性」區塊，找到「已阻止使用 NextCalc」，按「**仍要打開**」。
+3. 在確認對話框再按一次「打開」，必要時輸入密碼或用 Touch ID。
 
 ### 3. 升級（覆蓋安裝）
 

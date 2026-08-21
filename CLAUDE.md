@@ -40,7 +40,9 @@
 
 ## 專案概述
 
-macOS Telegram 桌面應用程式，含計算機風格鎖定畫面。使用 Electron BrowserView 架構提供密碼保護存取與資料重設功能。
+macOS Telegram 桌面應用程式，含計算機風格鎖定畫面。使用 Electron WebContentsView 架構提供密碼保護存取與資料重設功能。
+
+執行環境（1.4.0）：Electron 41.10.6（Chromium 146 / Node 24）、electron-builder 26.15.3、electron-updater 6.8.9、`minimumSystemVersion` 12.0。
 
 ## 開發指令
 
@@ -54,21 +56,26 @@ npm run release:minor   # 強制升 minor 版本 (1.0.0 → 1.1.0)
 npm run release:major   # 強制升 major 版本 (1.0.0 → 2.0.0)
 ```
 
-開發期間重啟應用程式:
+開發期間重啟應用程式（**只殺本專案的 Electron**，機器上可能有其他 Electron app 在跑，不要用 `pkill -9 -f Electron`）:
 ```bash
-pkill -9 -f Electron && sleep 2 && npm start
+pkill -9 -f "$PWD/node_modules/electron/dist/Electron.app" 2>/dev/null; sleep 2; npm start
 ```
 
 ## 架構
 
-### 核心架構模式: BrowserView 鎖定畫面
+### 核心架構模式: WebContentsView 鎖定畫面
 
 應用程式使用獨特的雙層架構:
 
 1. **主視窗** (calculator-lock.html) - 始終可見,作為鎖定畫面
-2. **BrowserView** (Telegram Web) - 鎖定時隱藏在畫面外 (y: -10000),解鎖時移入視圖
+2. **WebContentsView** (Telegram Web) - 鎖定時從主視窗 detach,解鎖時 attach 回來
 
-關鍵概念: Telegram Web 在背景的 BrowserView 中持續運行,在鎖定/解鎖循環期間從不重新載入。這保留了會話狀態。
+關鍵概念: Telegram Web 的 `webContents` 在鎖定期間仍然活著（**只 detach，不 destroy**），在鎖定/解鎖循環期間從不重新載入。這保留了會話狀態。
+
+> BrowserView 自 Electron 30 起標記棄用，1.4.0 已全面遷移到 `WebContentsView`。差異三點（動這層前必看 `window/BrowserViewManager.js` 檔頭註解）:
+> - `addBrowserView` / `removeBrowserView` → `mainWindow.contentView.addChildView` / `removeChildView`
+> - **沒有 `setAutoResize`** → 視窗縮放時的 bounds 必須由主視窗 `resize` 事件手動驅動
+> - 預設背景是**不透明白色**（BrowserView 是透明）→ 建立後立刻 `setBackgroundColor('#00000000')`，否則會白閃
 
 ### 模組組織
 
@@ -78,11 +85,11 @@ main.js                    # 入口點,協調所有模組
 │   ├── ConfigManager.js   # 密碼/設定的單例 (儲存至 ~/Library/Application Support)
 │   └── IdleDetector.js    # 基於閒置時間的自動鎖定
 ├── features/
-│   ├── LockManager.js     # 核心鎖定/解鎖邏輯,協調 BrowserView 定位
+│   ├── LockManager.js     # 核心鎖定/解鎖邏輯,協調 WebContentsView attach/detach
 │   └── UpdateManager.js   # 自動更新管理 (使用 electron-updater)
 ├── window/
 │   ├── MainWindow.js      # 計算機視窗管理
-│   └── BrowserViewManager.js  # Telegram BrowserView 生命週期
+│   └── BrowserViewManager.js  # Telegram WebContentsView 生命週期（檔名沿用舊稱）
 ├── menu/
 │   └── MenuBuilder.js     # macOS 選單列 (根據鎖定狀態變化)
 ├── ipc/
@@ -93,38 +100,44 @@ main.js                    # 入口點,協調所有模組
 
 ### 狀態流程
 
-1. **啟動**: MainWindow 顯示計算機 → BrowserView 在 y: -10000 載入 Telegram
-2. **解鎖**: 使用者輸入密碼 (預設密碼見 `config/ConfigManager.js` 預設值) → BrowserView 移動到可見位置 → 選單變更為解鎖狀態
-3. **鎖定**: 手動鎖定或閒置超時 → BrowserView 移至畫面外 → 選單變更為鎖定狀態
+1. **啟動**: MainWindow 顯示計算機 → 建立 WebContentsView 載入 Telegram，但**不 attach 到主視窗**（省下合成與渲染成本）
+2. **解鎖**: 使用者輸入密碼 (預設密碼見 `config/ConfigManager.js` 預設值) → `contentView.addChildView()` + 重設 bounds → 選單變更為解鎖狀態
+3. **鎖定**: 手動鎖定或閒置超時 → `contentView.removeChildView()`（webContents 保持存活）→ 選單變更為鎖定狀態
 4. **資料重設**: 計算機或 Telegram 中輸入指定按鍵序列 (序列見 `config/ConfigManager.js` 與 `panic-detector.js`) → 清除所有資料 → 重置為鎖定狀態
 
 ### 模組相依性
 
 LockManager 是中央協調器:
 - 從計算機接收解鎖請求 (透過 IPC)
-- 控制 BrowserView 位置
+- 控制 Telegram WebContentsView 的 attach / detach
 - 觸發選單重建
 - 管理閒置偵測器狀態
 - 處理緊急模式資料清除
 
 ## 關鍵實作細節
 
-### BrowserView 定位策略
+### WebContentsView attach / detach 策略
 
-鎖定/解鎖機制依賴於 BrowserView 的 Y 座標定位:
+鎖定/解鎖機制依賴於把 view 從主視窗的 view 樹上摘下與掛回（**不是**把它移到畫面外的 `y: -10000`，那是 1.4.0 之前的舊做法）:
 
 ```javascript
-// 鎖定狀態
-telegramView.setBounds({ x: 0, y: -10000, width, height });
+// 鎖定狀態：摘下 → 停止合成與渲染，webContents 仍存活
+mainWindow.contentView.removeChildView(telegramView);
 
-// 解鎖狀態
+// 解鎖狀態：掛回 → 必須重設 bounds，否則位置不對
+mainWindow.contentView.addChildView(telegramView);
 telegramView.setBounds({ x: 0, y: 0, width, height });
 ```
 
 這種方法:
-- 避免銷毀/重建 BrowserView (保留 Telegram 會話)
+- 避免銷毀/重建 view (保留 Telegram 會話)
 - 提供即時鎖定/解鎖而無需重新載入頁面
-- 維護背景操作 (通知、訊息)
+- 鎖定期間 renderer 被 Chromium 節流（比舊的「移出畫面」更省資源），但**通知會累積到解鎖後補發**（已知 trade-off）
+
+注意事項:
+- `attachView()` 前要 `isDestroyed()` 守衛（避免對已銷毀的 view 操作）
+- view 生命週期結束時顯式 `webContents.close()`，否則監聽器會洩漏
+- 沒有 `setAutoResize`：主視窗 `resize` 事件是**唯一**的 bounds 更新路徑
 
 ### 密碼驗證
 
@@ -141,17 +154,30 @@ telegramView.setBounds({ x: 0, y: 0, width, height });
 
 兩者都觸發 `clear-telegram-data` IPC → 清除會話儲存、IndexedDB、快取 → 以預設密碼重置為鎖定狀態
 
-### 通知覆寫
+### 通知路徑（**注意：preload 的覆寫其實沒有生效**）
 
-Telegram Web 通知在 `preload.js` 中被攔截:
-- 用自訂 `ElectronNotification` 類別覆寫瀏覽器 `Notification` API
-- 透過 IPC 將所有通知路由到 macOS 原生通知
-- 防止權限提示,提供無縫通知體驗
+實際送出通知的路徑（2026-08 實測，task#100446 Phase 2）:
+
+```
+Telegram 頁面呼叫原生 Notification → Chromium → macOS cocoa notification presenter → 系統通知中心
+```
+
+也就是說通知**完全沒有經過我們的 JS 層**。`preload.js` 裡的 `ElectronNotification` 類別與 `window.Notification` 覆寫（`preload.js:73-149`）是**死碼**：
+- Telegram 是在 main world 執行，preload 在 isolated world（`contextIsolation: true`，見 `window/BrowserViewManager.js:59`）
+- 兩個世界的 `window` 不是同一個物件，preload 改的 `window.Notification` 頁面看不到
+- Service Worker 的 `showNotification()` 在此環境是 no-op（回傳的 promise 永不 resolve），所以也不是它在送
+
+實務含意:
+- 想改通知的顯示內容/時機，**改 preload 沒用**；正解是用 CDP `Page.addScriptToEvaluateOnNewDocument` 在 **main world、document-start** 注入覆寫（已實測可攔到）
+- 通知的「鎖定時不顯示內容」目前是靠 macOS 系統設定（通知 → NextCalc → 顯示預覽 → 解鎖時），不是靠 app 邏輯
+- 這段死碼暫時保留（移除屬獨立清理任務），但**不要據它推論通知行為**
 
 ## 資料儲存位置
 
-- **設定**: `~/Library/Application Support/telegram-calculator/config.json`
-- **Telegram 資料**: `~/Library/Application Support/telegram-calculator/telegram-data/`
+- **設定**: `~/Library/Application Support/next-calc/config.json`
+- **Telegram 資料**: `~/Library/Application Support/next-calc/telegram-data/`
+
+> 路徑是 `app.getPath('userData')`，實際目錄名由 `package.json` 的 `name`（`next-calc`）決定。舊文件寫的 `telegram-calculator` 是錯的。
 - **資料重設**: 刪除上述兩個目錄,將密碼重置為 `config/ConfigManager.js` 中的預設值
 
 ## 重要模式
@@ -219,7 +245,7 @@ MenuBuilder 根據以下條件動態建立選單:
 
 - 密碼以明文儲存在 config.json (僅本地檔案系統保護)
 - 資料重設觸發序列是硬編碼的 (不可設定以防忘記),值見 `config/ConfigManager.js`
-- BrowserView 畫面外定位並非加密安全 (記憶體取證可能恢復)
+- 鎖定只是把 WebContentsView detach，並非加密安全 (webContents 仍存活，記憶體取證可能恢復)
 - 緊急清除刪除檔案但不安全抹除 (SSD TRIM 可能使恢復困難)
 
 ## Git Commit 規範
@@ -262,7 +288,7 @@ git commit -m "fix: 修復鎖定畫面閃爍問題"
 git commit -m "fix: 修復通知在鎖定狀態下仍顯示的問題"
 
 # 效能改進
-git commit -m "perf: 優化 BrowserView 渲染效能"
+git commit -m "perf: 優化 WebContentsView 渲染效能"
 
 # 重構
 git commit -m "refactor: 重構 LockManager 模組結構"
@@ -410,24 +436,22 @@ npm run build
 3. ✗ **清除 Service Worker 快取** - Service Worker 仍然繞過攔截
 4. ✗ **在主進程層級監聽 IPC 和其他事件** - 沒有任何事件被觸發
 
-**結論**:
-**Telegram Web 的 Service Worker 通知完全繞過了 Electron 的 JavaScript 層級**，直接從 Chromium 底層到達 macOS 系統通知中心。無法在 JavaScript 或 Electron API 層級攔截這些通知。
+**結論（2026-08-21 更正歸因，task#100446 Phase 2 實測）**:
 
-**為什麼無法攔截**:
-- Service Worker 運行在獨立的執行緒和隔離的上下文中
-- Service Worker 的通知 API 調用直接通過 Chromium 的原生實作
-- JavaScript 層級的 API 覆寫對已運行的 Service Worker 無效
-- Electron 沒有提供主進程層級的通知攔截 API
+上面四條嘗試失敗的記錄為真，但**當年的歸因是錯的**。
 
-**可能的替代方案** (未實作):
-- 使用 Electron protocol API 攔截並修改 Service Worker 腳本文件本身（技術複雜度極高）
-- 改為「鎖定時完全禁用通知」而非「隱藏內容」（功能降級）
-- 接受限制，不實作此功能
+- ❌ 舊結論：「Telegram 的 Service Worker 通知繞過了 Electron 的 JavaScript 層」
+- ✅ 正確歸因：**`contextIsolation: true` 的世界隔離**。Telegram 頁面在 main world 呼叫**原生 `Notification`**，preload 在 isolated world，兩者的 `window` 不是同一個物件 → preload 的覆寫（嘗試 1）對頁面完全不可見，是死碼。至於 Service Worker 的 `showNotification()`，在此環境其實是 no-op（promise 永不 resolve），所以嘗試 2/3 攔不到不是因為「SW 繞過」，而是因為**通知根本不是 SW 送的**
+- 真實送出路徑：頁面原生 `Notification` → Chromium → macOS cocoa notification presenter → 系統通知中心
+
+**正解方向（已實測可攔）**:
+- 用 CDP `Page.addScriptToEvaluateOnNewDocument`，在 **main world、document-start** 注入 `Notification` 覆寫 —— 這條路能攔到真正在送的那個 API
+- 現行 preload 的 `ElectronNotification` 是死碼，不要在它上面加功能
 
 **學到的教訓**:
-- Service Worker 通知無法在應用程式層級攔截
-- 需要更深層的系統層級介入才能修改 Service Worker 行為
-- 在規劃功能前應先驗證技術可行性
+- 「攔不到」要先定位**誰在送**，不要直接歸因給最可疑的元件（當年錯把 SW 當兇手，錯了將近兩年）
+- `contextIsolation` 下 preload 改 `window.X` 對頁面無效，這是設計而非 bug
+- 在規劃功能前應先驗證技術可行性，而且要驗到「路徑」而不只是「結果」
 
 ## 遠端會話管理
 
