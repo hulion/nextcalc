@@ -380,13 +380,25 @@
       <p class="sub">把 app 從磁碟映像檔搬進「應用程式」資料夾。</p>
       <ol class="flow">
         <li>雙擊 <code>NextCalc-1.4.0-arm64.dmg</code> 掛載磁碟映像檔。</li>
-        <li>視窗開啟後，把左側的 <strong>NextCalc</strong> 圖示拖到右側的 <strong>Applications</strong>（應用程式）捷徑上。</li>
+        <li>視窗上排會看到 <strong>NextCalc</strong> 與 <strong>Applications</strong>（應用程式）捷徑，把 NextCalc 圖示拖到 Applications 上。</li>
         <li>複製完成後，在 Finder 側邊欄按下 NextCalc 磁碟旁的退出符號，或在桌面上對它按右鍵選「退出」。</li>
         <li>DMG 檔案本身可以刪除，安裝好的 app 位於 <code>/Applications/NextCalc.app</code>。</li>
       </ol>
       <div class="callout">
+        <span class="label">DMG 裡有什麼</span>
+        映像檔視窗下排放了三個檔案，DMG 本身就是完整的安裝包，不需要另外下載附檔：
+        <code>install.sh</code>（自動安裝腳本）、<code>AGENT_INSTALL.md</code>（給 AI 助理讀的安裝指引）、<code>INSTALL.html</code>（就是本文件）。
+      </div>
+      <div class="callout">
+        <span class="label">交給 AI 助理安裝</span>
+        掛載 DMG 後，把映像檔裡的 <code>AGENT_INSTALL.md</code> 交給 Claude Code 之類的 AI 助理，請它照著安裝即可；它會執行同一份 <code>install.sh</code>，自動處理舊版覆蓋與隔離屬性。
+      </div>
+      <div class="callout">
         <span class="label">命令列替代做法</span>
-        也可以用終端機完成掛載與複製：
+        也可以自己在終端機執行映像檔內的安裝腳本（腳本會沿用現有掛載點，不重複掛載也不卸載）：
+        <pre><code>hdiutil attach NextCalc-1.4.0-arm64.dmg
+bash /Volumes/NextCalc*/install.sh</code></pre>
+        或純手動掛載與複製：
         <pre><code>hdiutil attach NextCalc-1.4.0-arm64.dmg
 cp -R /Volumes/NextCalc*/NextCalc.app /Applications/
 hdiutil detach /Volumes/NextCalc*</code></pre>

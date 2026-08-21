@@ -80,13 +80,31 @@
       "contents": [
         {
           "x": 130,
-          "y": 220
+          "y": 270
         },
         {
           "x": 410,
-          "y": 220,
+          "y": 270,
           "type": "link",
           "path": "/Applications"
+        },
+        {
+          "x": 130,
+          "y": 400,
+          "type": "file",
+          "path": "install.sh"
+        },
+        {
+          "x": 270,
+          "y": 400,
+          "type": "file",
+          "path": "AGENT_INSTALL.md"
+        },
+        {
+          "x": 410,
+          "y": 400,
+          "type": "file",
+          "path": "INSTALL.html"
         }
       ]
     }

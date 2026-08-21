@@ -1,6 +1,8 @@
 # NextCalc 安裝指引（給 AI agent 讀）
 
-這是一份 **NextCalc 安裝任務**指引：把隨附的 `NextCalc-<版本>-arm64.dmg` 安裝到這台 macOS 的 `/Applications`，處理 ad-hoc 無簽名的 Gatekeeper 阻擋，並告知使用者建議的通知設定。給人看的版本是同目錄的 `INSTALL.html`。
+這是一份 **NextCalc 安裝任務**指引：把 `NextCalc-<版本>-arm64.dmg` 安裝到這台 macOS 的 `/Applications`，處理 ad-hoc 無簽名的 Gatekeeper 阻擋，並告知使用者建議的通知設定。給人看的版本是同目錄的 `INSTALL.html`。
+
+**這份文件、`install.sh`、`INSTALL.html` 三個檔案都放在 DMG 內**，所以 DMG 本身就是自足的分發包 —— 使用者只要拿到 DMG 就有安裝腳本與指引，不需要另外下載附檔。
 
 ## 前提事實
 
@@ -10,19 +12,42 @@
 - 使用者資料在 app 套件之外：`~/Library/Application Support/next-calc`（覆蓋安裝不會動到它）
 - 系統需求：**macOS 12.0 或更高版本**（1.4.0 起，`minimumSystemVersion` = 12.0）
 
-## 首選路徑：執行 install.sh
+## 首選路徑：執行 DMG 內的 install.sh
+
+**標準流程（DMG 已掛載）**。先掛載 DMG，再直接執行映像檔內的腳本：
+
+```bash
+MOUNT="$(hdiutil attach -nobrowse -readonly -noverify /path/to/NextCalc-1.4.0-arm64.dmg | awk -F'\t' '/\/Volumes\//{print $NF; exit}')"
+bash "$MOUNT/install.sh"
+```
+
+腳本會偵測到「自己就在掛載點內」，直接沿用該掛載點：**不重複掛載**（不會多出 `/Volumes/NextCalc 1.4.0-arm64 1` 這種掛載點），**也不卸載**這個不是它掛的映像檔——安裝完請自行退出磁碟。
+
+使用者已經在 Finder 雙擊掛載 DMG 時，路徑就是掛載點內的腳本，同樣直接跑：
+
+```bash
+bash "/Volumes/NextCalc 1.4.0-arm64/install.sh"
+```
+
+掛載點名稱含版本號與架構，換版本就會變，不要寫死；用上面 `hdiutil attach` 的輸出取得，或 `ls -d "/Volumes/NextCalc"*`。
+
+**替代流程（在 DMG 外面執行腳本副本）**：指定 DMG 路徑，腳本自己掛載，結束時自己卸載。
 
 ```bash
 bash install.sh /path/to/NextCalc-1.4.0-arm64.dmg
 ```
 
-DMG 與腳本放在同一個目錄時，可以省略參數，腳本會自動挑同目錄（或其 `dist/`）內最新的 `NextCalc-*.dmg`：
+DMG 與腳本副本放在同一個目錄時可省略參數，腳本會自動挑同目錄（或其 `dist/`）內最新的 `NextCalc-*.dmg`：
 
 ```bash
 bash install.sh
 ```
 
-腳本會依序做完：掛載 DMG → 偵測並結束執行中的舊版 → 移除舊 app → 複製新 app 到 `/Applications` → 移除 `com.apple.quarantine` → 卸載 DMG → 開啟 app。任何一步失敗都會用繁體中文說明原因並以非 0 結束碼中止。
+這條路徑的掛載是冪等的：若該 DMG 已經掛載，腳本會沿用現有掛載點而不重複掛載，並且不卸載它。
+
+**環境變數 `NEXTCALC_APP_DEST`**：安裝目的地目錄，預設 `/Applications`。沒有 `/Applications` 寫入權限時改用 `NEXTCALC_APP_DEST="$HOME/Applications"`（目錄不存在會自動建立）。除此之外不要改，安裝到非標準位置會讓使用者找不到 app。
+
+不論走哪條路徑，腳本都會依序做完：取得映像檔內容 → 偵測並結束執行中的舊版 → 移除舊 app → 複製新 app 到 `/Applications` → 移除 `com.apple.quarantine` → （只在自己掛載時）卸載 DMG → 開啟 app。任何一步失敗都會用繁體中文說明原因並以非 0 結束碼中止。
 
 看到結尾的 `✓ NextCalc 安裝完成` 才算成功；只要中止了，請把錯誤訊息原文回報給使用者，不要自行改寫或略過。
 
@@ -30,9 +55,9 @@ bash install.sh
 
 | 錯誤訊息關鍵字 | 處置 |
 | --- | --- |
-| `找不到 DMG` | 用完整路徑再跑一次，或先確認 DMG 已下載完成 |
+| `找不到 DMG` | 腳本不在掛載點內、同目錄也沒有 DMG。改用完整路徑再跑一次，或先確認 DMG 已下載完成 |
 | `仍在執行中，無法覆蓋` | 請使用者手動結束 NextCalc（`Command + Q`）後重跑 |
-| `/Applications 無寫入權限` | 改用 `sudo bash install.sh <dmg>`，或走下面的手動流程 |
+| `無寫入權限` | 改用 `sudo bash "$MOUNT/install.sh"`，或裝到使用者目錄：`NEXTCALC_APP_DEST="$HOME/Applications" bash "$MOUNT/install.sh"` |
 | `掛載失敗` | DMG 可能下載不完整或損毀，重新取得檔案 |
 
 ## Fallback：手動流程
