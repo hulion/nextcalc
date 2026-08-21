@@ -62,6 +62,17 @@ class MainWindow {
       if (this.idleDetector) {
         this.idleDetector.stop();
       }
+      // [task#100446] A WebContentsView's webContents is NOT destroyed when its owning
+      // window closes (unlike BrowserView; see Electron's base-window docs: not closing
+      // it explicitly leaks). On macOS 'window-all-closed' does not quit (main.js), and
+      // Dock re-open builds a brand-new view via createApp(), so every close/reopen
+      // cycle would strand a live Telegram renderer + its Service Worker.
+      if (this.telegramView &&
+          this.telegramView.webContents &&
+          !this.telegramView.webContents.isDestroyed()) {
+        this.telegramView.webContents.close();
+        console.log('[MainWindow] Telegram webContents closed with window');
+      }
       // Don't cleanup IPC handlers - they will be reused when window reopens
       this.mainWindow = null;
       this.telegramView = null;

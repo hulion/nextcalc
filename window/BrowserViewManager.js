@@ -1,9 +1,18 @@
 /**
- * BrowserViewManager - Telegram BrowserView 管理
- * 負責建立和管理 Telegram BrowserView，包括載入 Telegram 網頁和注入腳本
+ * BrowserViewManager - Telegram WebContentsView 管理
+ * 負責建立和管理 Telegram WebContentsView，包括載入 Telegram 網頁和注入腳本
+ *
+ * [task#100446] Migrated BrowserView -> WebContentsView (BrowserView is deprecated
+ * since Electron 30). API deltas handled here:
+ *   - addBrowserView/removeBrowserView -> mainWindow.contentView.addChildView/removeChildView
+ *   - setAutoResize: does NOT exist on WebContentsView -> resize is driven manually by
+ *     MainWindow 'resize' -> onResize -> resize() below
+ *   - WebContentsView defaults to an OPAQUE WHITE background (BrowserView was
+ *     transparent) -> setBackgroundColor('#00000000') right after construction
+ *   - webContents is NOT destroyed with the window -> MainWindow 'closed' closes it
  */
 
-const { BrowserView } = require('electron');
+const { WebContentsView } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -31,7 +40,7 @@ class BrowserViewManager {
   create(mainWindow) {
     this.mainWindow = mainWindow;
 
-    // [task#100437 O5] Reset the once-only idleDetector guard for EACH new BrowserView.
+    // [task#100437 O5] Reset the once-only idleDetector guard for EACH new view.
     // This manager is a module-level singleton; on macOS the app survives window close
     // (window-all-closed does not quit on darwin), so Dock re-open -> app 'activate' ->
     // createApp() -> create() builds a fresh telegramView/webContents. Without this reset
@@ -43,8 +52,8 @@ class BrowserViewManager {
     // [task#100439 O3a] Fresh view starts detached; first unlock attaches it.
     this.isViewAttached = false;
 
-    // Create BrowserView for Telegram (hidden initially)
-    this.telegramView = new BrowserView({
+    // Create WebContentsView for Telegram (detached initially)
+    this.telegramView = new WebContentsView({
       webPreferences: {
         preload: path.join(__dirname, '..', 'preload.js'),
         contextIsolation: true,
@@ -54,17 +63,23 @@ class BrowserViewManager {
       }
     });
 
-    // [task#100439 O3a] Do NOT addBrowserView here. The app starts locked, so the
-    // view would only be composited off-screen (wasted work). We load the URL now
-    // (Telegram + its Service Worker initialise, so notifications work while locked)
-    // but defer attach to the first unlock (LockManager -> attachView()).
-    // No pre-attach setBounds/setAutoResize: per Electron (issue #20064) those are
-    // no-ops before the view is added to a window. attachView() sets bounds after add.
+    // [task#100446] WebContentsView's default background is opaque WHITE (BrowserView's
+    // was transparent). Without this the lock<->unlock attach would flash white, which
+    // for a privacy app means the disguise visibly breaks. Set it immediately after
+    // construction, not lazily on first attach. 8-digit transparent hex is accepted.
+    this.telegramView.setBackgroundColor('#00000000');
+
+    // [task#100439 O3a] Do NOT attach here. The app starts locked, so the view would
+    // only be composited off-screen (wasted work). We load the URL now (Telegram + its
+    // Service Worker initialise, so notifications work while locked) but defer attach
+    // to the first unlock (LockManager -> attachView()).
+    // No pre-attach setBounds: per Electron (issue #20064) it is a no-op before the
+    // view is added to a window. attachView() sets bounds after adding.
 
     // Setup event handlers
     this.setupEventHandlers();
 
-    // Load Telegram in BrowserView (works whether or not the view is attached)
+    // Load Telegram in the view (works whether or not the view is attached)
     this.telegramView.webContents.loadURL('https://web.telegram.org/k/');
 
     // [task#100439 O4] Start the periodic HTTP-cache cleanup timer for this view.
@@ -74,33 +89,37 @@ class BrowserViewManager {
   }
 
   /**
-   * [task#100439 O3a] 將 Telegram BrowserView attach 回主視窗（解鎖時呼叫）
-   * detach 過的 view 重新 addBrowserView 後必須重設 bounds 才會顯示在正確位置。
+   * [task#100439 O3a] 將 Telegram WebContentsView attach 回主視窗（解鎖時呼叫）
+   * detach 過的 view 重新 addChildView 後必須重設 bounds 才會顯示在正確位置。
+   * [task#100446] 沒有 setAutoResize 可用（WebContentsView 無此 API），視窗縮放
+   * 改由 MainWindow 'resize' -> onResize -> resize() 手動跟隨。
    */
   attachView() {
     if (!this.telegramView || !this.mainWindow || this.mainWindow.isDestroyed()) return;
+    // [task#100446] Adding a view whose webContents was already closed crashes the
+    // app (electron#47099). isViewAttached alone does not cover that case.
+    if (!this.telegramView.webContents || this.telegramView.webContents.isDestroyed()) return;
     if (this.isViewAttached) return; // idempotent guard, avoid double add
 
-    this.mainWindow.addBrowserView(this.telegramView);
+    this.mainWindow.contentView.addChildView(this.telegramView);
     const bounds = this.mainWindow.getContentBounds();
     this.telegramView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
-    this.telegramView.setAutoResize({ width: true, height: true });
     this.isViewAttached = true;
-    console.log('[BrowserViewManager] BrowserView attached (unlock)');
+    console.log('[BrowserViewManager] WebContentsView attached (unlock)');
   }
 
   /**
-   * [task#100439 O3a] 將 Telegram BrowserView 從主視窗 detach（鎖定時呼叫）
-   * 只 removeBrowserView（停止合成/渲染），不 destroy webContents —— session 與
+   * [task#100439 O3a] 將 Telegram WebContentsView 從主視窗 detach（鎖定時呼叫）
+   * 只 removeChildView（停止合成/渲染），不 destroy webContents —— session 與
    * Service Worker 通知不受影響。對已 detach 的 view 不重複操作。
    */
   detachView() {
     if (!this.telegramView || !this.mainWindow || this.mainWindow.isDestroyed()) return;
     if (!this.isViewAttached) return; // already detached, nothing to do
 
-    this.mainWindow.removeBrowserView(this.telegramView);
+    this.mainWindow.contentView.removeChildView(this.telegramView);
     this.isViewAttached = false;
-    console.log('[BrowserViewManager] BrowserView detached (lock) — webContents kept alive');
+    console.log('[BrowserViewManager] WebContentsView detached (lock) — webContents kept alive');
   }
 
   /**
@@ -234,7 +253,12 @@ class BrowserViewManager {
   }
 
   /**
-   * 調整 BrowserView 大小（用於視窗 resize 時）
+   * 調整 view 大小（用於視窗 resize 時）
+   * [task#100446] Since the WebContentsView migration this is the ONLY resize path —
+   * setAutoResize no longer exists, so nothing else keeps bounds in sync. Wired from
+   * main.js: mainWindowManager.setDependencies({ onResize: () => resize(isUnlocked) }),
+   * fired by MainWindow's 'resize' handler. Detached (locked) view needs no resize;
+   * attachView() re-reads getContentBounds() on the next unlock.
    */
   resize(isUnlocked) {
     if (this.telegramView && isUnlocked && this.mainWindow) {

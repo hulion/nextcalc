@@ -83,12 +83,12 @@ class LockManager {
         this.settingsWindow.close();
       }
 
-      // [task#100439 O3a] Detach the Telegram BrowserView (removeBrowserView) instead
-      // of just moving it off-screen. Detaching stops it from being composited/rendered
+      // [task#100439 O3a] Detach the Telegram view (task#100446: contentView.removeChildView)
+      // instead of just moving it off-screen. Detaching stops it from being composited/rendered
       // while locked (locked is the background steady-state). webContents is NOT
       // destroyed, so the session stays and notifications (Service Worker) keep working.
       if (this.browserViewManager) {
-        console.log('[LockManager] Locking app - detaching BrowserView (webContents stays active)');
+        console.log('[LockManager] Locking app - detaching Telegram view (webContents stays active)');
         this.browserViewManager.detachView();
       } else {
         // Fallback (should not happen): legacy off-screen hide keeps TG hidden while locked.
@@ -150,10 +150,10 @@ class LockManager {
         this.ipcHandler.setUnlocked(true);
       }
 
-      // [task#100439 O3a] Re-attach the Telegram BrowserView (addBrowserView + reset
-      // bounds). A detached view must be re-added and re-bounded to become visible again.
+      // [task#100439 O3a] Re-attach the Telegram view (task#100446: contentView.addChildView
+      // + reset bounds). A detached view must be re-added and re-bounded to become visible again.
       if (this.browserViewManager) {
-        console.log('[LockManager] Unlocking app - attaching BrowserView');
+        console.log('[LockManager] Unlocking app - attaching Telegram view');
         this.browserViewManager.attachView();
       } else {
         // Fallback (should not happen): legacy off-screen -> on-screen move.
