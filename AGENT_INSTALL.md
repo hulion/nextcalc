@@ -89,7 +89,7 @@ open /Applications/NextCalc.app
 
 兩處各設一次，兩者是串聯關係：Telegram 端決定通知裡有沒有內容，macOS 端決定何時能顯示。
 
-1. **macOS**：系統設定 → 通知 → NextCalc → 「顯示預覽」設為「**解鎖時**」。解鎖時顯示發訊者與訊息內容，鎖定畫面自動隱藏，符合此 app 的隱私定位。
+1. **macOS**：系統設定 → 通知 → NextCalc → 「顯示預覽」設為「**解鎖時**」。解鎖時顯示發訊者與訊息內容，鎖定畫面自動隱藏。
 2. **Telegram Web 端**：Settings → Notifications → **Message Preview** 開啟，通知才會帶出發訊者與訊息摘要。
 
 這兩項無法用命令列代設，請以文字指引使用者自行操作。

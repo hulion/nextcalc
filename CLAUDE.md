@@ -40,7 +40,7 @@
 
 ## 專案概述
 
-一個偽裝成計算機的隱私導向 Telegram macOS 桌面應用程式。使用 Electron BrowserView 架構提供密碼保護存取和緊急資料清除功能。
+macOS Telegram 桌面應用程式，含計算機風格鎖定畫面。使用 Electron BrowserView 架構提供密碼保護存取與資料重設功能。
 
 ## 開發指令
 
@@ -94,9 +94,9 @@ main.js                    # 入口點,協調所有模組
 ### 狀態流程
 
 1. **啟動**: MainWindow 顯示計算機 → BrowserView 在 y: -10000 載入 Telegram
-2. **解鎖**: 使用者輸入密碼 (預設 1209) → BrowserView 移動到可見位置 → 選單變更為解鎖狀態
+2. **解鎖**: 使用者輸入密碼 (預設密碼見 `config/ConfigManager.js` 預設值) → BrowserView 移動到可見位置 → 選單變更為解鎖狀態
 3. **鎖定**: 手動鎖定或閒置超時 → BrowserView 移至畫面外 → 選單變更為鎖定狀態
-4. **緊急模式**: 計算機上輸入 "4444" 或 Telegram 中輸入 "444444" → 清除所有資料 → 重置為鎖定狀態
+4. **資料重設**: 計算機或 Telegram 中輸入指定按鍵序列 (序列見 `config/ConfigManager.js` 與 `panic-detector.js`) → 清除所有資料 → 重置為鎖定狀態
 
 ### 模組相依性
 
@@ -136,7 +136,7 @@ telegramView.setBounds({ x: 0, y: 0, width, height });
 ### 緊急模式偵測
 
 兩個獨立的觸發器:
-1. **計算機鎖定畫面**: 在 calculator-lock.js 中偵測輸入序列 "4444"
+1. **計算機鎖定畫面**: 在 calculator-lock.js 中偵測指定輸入序列 (見 `config/ConfigManager.js` 預設值)
 2. **Telegram 介面**: `panic-detector.js` 注入到 Telegram 頁面,偵測 3 秒內按 6 次 "4"
 
 兩者都觸發 `clear-telegram-data` IPC → 清除會話儲存、IndexedDB、快取 → 以預設密碼重置為鎖定狀態
@@ -152,7 +152,7 @@ Telegram Web 通知在 `preload.js` 中被攔截:
 
 - **設定**: `~/Library/Application Support/telegram-calculator/config.json`
 - **Telegram 資料**: `~/Library/Application Support/telegram-calculator/telegram-data/`
-- **緊急模式**: 刪除上述兩個目錄,將密碼重置為 "1209"
+- **資料重設**: 刪除上述兩個目錄,將密碼重置為 `config/ConfigManager.js` 中的預設值
 
 ## 重要模式
 
@@ -218,7 +218,7 @@ MenuBuilder 根據以下條件動態建立選單:
 ## 安全性考量
 
 - 密碼以明文儲存在 config.json (僅本地檔案系統保護)
-- 緊急模式 "4444" 序列是硬編碼的 (不可設定以防忘記)
+- 資料重設觸發序列是硬編碼的 (不可設定以防忘記),值見 `config/ConfigManager.js`
 - BrowserView 畫面外定位並非加密安全 (記憶體取證可能恢復)
 - 緊急清除刪除檔案但不安全抹除 (SSD TRIM 可能使恢復困難)
 

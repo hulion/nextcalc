@@ -215,7 +215,7 @@
 **結果**：
 - Telegram 已登出（需重新登入）
 - 應用程式鎖定（顯示計算機畫面）
-- 用戶下次輸入密碼 1209 後，會看到 Telegram 登入畫面
+- 用戶下次輸入解鎖密碼後，會看到 Telegram 登入畫面
 
 **可復原性**：
 - 用戶可以重新登入 Telegram
@@ -368,7 +368,7 @@ const deviceId = crypto.createHash('sha256')
 ```
 
 **註冊時機**：
-- 首次輸入預設密碼 1209 驗證成功時
+- 首次輸入預設密碼（見 `config/ConfigManager.js` 預設值）驗證成功時
 - 自動向伺服器註冊裝置 ID
 - 儲存到 Cloudflare KV
 
@@ -962,7 +962,7 @@ wrangler kv:key put --binding=WIPE_KV \
 
 **本地測試**：
 1. 啟動 Electron App：`npm start`
-2. 首次輸入密碼 1209，觸發註冊
+2. 首次輸入預設密碼（見 `config/ConfigManager.js` 預設值），觸發註冊
 3. 查看 Cloudflare KV 確認裝置已註冊
 4. 從 Web 後台發送清除指令
 5. 等待 5 分鐘或重啟 App，觀察清除執行
