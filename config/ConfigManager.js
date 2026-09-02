@@ -3,6 +3,17 @@ const path = require('path');
 const fs = require('fs');
 
 /**
+ * 遮罩敏感值，只保留長度資訊供診斷用
+ * 密碼永遠不得以明文進入 console —— 終端紀錄會被複製貼上
+ * @param {string} value - 待遮罩的敏感值
+ * @returns {string} 遮罩後的字串，如 `****(4)`
+ */
+function maskSecret(value) {
+  if (value === undefined || value === null) return '(unset)';
+  return `****(${String(value).length})`;
+}
+
+/**
  * 配置管理器
  * 集中管理應用程序配置，包括密碼和閒置時間設定
  */
@@ -33,7 +44,7 @@ class ConfigManager {
           : this.DEFAULT_IDLE_TIMEOUT;
 
         console.log('[ConfigManager] Configuration loaded successfully');
-        console.log('[ConfigManager] Password:', this.config.password);
+        console.log('[ConfigManager] Password:', maskSecret(this.config.password));
         console.log('[ConfigManager] Idle timeout:', this.config.idleTimeout);
         return true;
       }
@@ -90,7 +101,7 @@ class ConfigManager {
 
     this.config.password = password;
     this.save();
-    console.log('[ConfigManager] Password updated:', password);
+    console.log('[ConfigManager] Password updated:', maskSecret(password));
   }
 
   /**
@@ -104,7 +115,7 @@ class ConfigManager {
       }
       this.config.password = this.DEFAULT_PASSWORD;
       this.config.idleTimeout = this.DEFAULT_IDLE_TIMEOUT;
-      console.log('[ConfigManager] Password reset to default:', this.DEFAULT_PASSWORD);
+      console.log('[ConfigManager] Password reset to default:', maskSecret(this.DEFAULT_PASSWORD));
     } catch (err) {
       console.error('[ConfigManager] Failed to reset password:', err);
       throw err;

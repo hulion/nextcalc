@@ -82,7 +82,7 @@ document.addEventListener('keydown', (event) => {
                     try {
                         await window.electronAPI.clearTelegramData();
                         await window.electronAPI.resetPassword();
-                        console.log('[Panic Detector] Password reset to default (1209)');
+                        console.log('[Panic Detector] Password reset to default');
                     } catch (err) {
                         console.error('[Panic Detector] Failed to reset password:', err);
                     }

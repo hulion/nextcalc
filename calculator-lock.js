@@ -590,7 +590,8 @@
         async function loadPassword() {
             try {
                 PASSWORD = await window.electronAPI.getPassword();
-                console.log('[Calculator] Password loaded:', PASSWORD);
+                // 只印長度，不印明文（console 紀錄會被複製貼上）
+                console.log('[Calculator] Password loaded:', PASSWORD ? `****(${String(PASSWORD).length})` : '(unset)');
             } catch (err) {
                 console.error('[Calculator] Failed to load password:', err);
             }

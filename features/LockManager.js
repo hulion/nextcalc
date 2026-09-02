@@ -109,7 +109,8 @@ class LockManager {
             try {
               if (typeof PASSWORD !== 'undefined') {
                 PASSWORD = await window.electronAPI.getPassword();
-                console.log('[LockManager] Password reloaded on lock:', PASSWORD);
+                // 只印長度，不印明文（此段在外層 template literal 內，故用字串相接而非 template 插值）
+                console.log('[LockManager] Password reloaded on lock:', PASSWORD ? '****(' + String(PASSWORD).length + ')' : '(unset)');
               }
             } catch (err) {
               console.error('[LockManager] Failed to reload password:', err);
